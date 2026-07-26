@@ -33,7 +33,7 @@ variable "server_name" {
 variable "ssh_key_name" {
   description = "Name of the SSH key"
   type        = string
-  default     = "kidora-dev-key"
+  default     = "kidora_ssh"
 }
 
 variable "ssh_public_key" {

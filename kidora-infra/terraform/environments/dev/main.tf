@@ -70,37 +70,13 @@ module "dns" {
   records = var.dns_records
 }
 
-resource "null_resource" "git_clone_repo" {
-  provisioner "local-exec" {
-    command = <<EOT
-      if [ ! -d "/tmp/infra-repo/.git" ]; then
-        git clone https://github.com/Moenes25/Cloud-Kidora-Ia.git /tmp/infra-repo
-      else
-        cd /tmp/infra-repo && git pull
-      fi
-    EOT
-    interpreter = ["/bin/bash", "-c"]
-  }
-}
-
+# Generate Ansible inventory from template with the provisioned server IP
 resource "local_file" "ansible_inventory" {
-  filename = "/tmp/infra-repo/kidora-infra/terraform/environments/dev/inventory.ini"
   content = templatefile("${path.module}/inventory.tpl", {
     dev_server_ip = module.dev_server.ip_address
   })
-
-  depends_on = [null_resource.git_clone_repo]
+  filename = abspath("${path.module}/../../../ansible/inventories/dev/hosts.ini")
 }
 
-resource "null_resource" "ansible_trigger" {
-  depends_on = [module.dev_server, local_file.ansible_inventory]
-  
-  triggers = {
-    inventory_path = local_file.ansible_inventory.filename
-    server_ip      = module.dev_server.ip_address
-  }
-  
-  provisioner "local-exec" {
-    command = "sleep 30 && ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ${local_file.ansible_inventory.filename} /tmp/infra-repo/kidora-infra/ansible/playbooks/main.yml"
-  }
-}
+# Ansible trigger has been moved to Ansible playbooks (terraform.yml)
+# Run Ansible from your PC with: ansible-playbook playbooks/main.yml

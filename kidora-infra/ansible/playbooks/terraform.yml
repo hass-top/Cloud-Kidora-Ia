@@ -1,0 +1,57 @@
+---
+- name: Provision infrastructure with Terraform
+  hosts: localhost
+  gather_facts: false
+  become: false
+  vars:
+    terraform_dir: "{{ playbook_dir }}/../../terraform/environments/dev"
+  tasks:
+    - name: Ensure Terraform is initialized
+      command: terraform init
+      args:
+        chdir: "{{ terraform_dir }}"
+      register: terraform_init
+      changed_when: terraform_init.stdout != 'Terraform has been successfully initialized!'
+      failed_when: terraform_init.rc != 0 and 'already initialized' not in terraform_init.stderr
+
+    - name: Create Terraform plan
+      command: terraform plan 
+      args:
+        chdir: "{{ terraform_dir }}"
+      register: terraform_plan
+      changed_when: false
+
+    - name: Apply Terraform plan
+      command: terraform apply -auto-approve 
+      args:
+        chdir: "{{ terraform_dir }}"
+      register: terraform_apply
+      changed_when: terraform_apply.stdout is search('Apply complete')
+
+    - name: Get Terraform outputs
+      command: terraform output -json
+      args:
+        chdir: "{{ terraform_dir }}"
+      register: terraform_outputs
+      changed_when: false
+
+    - name: Parse Terraform outputs
+      set_fact:
+        terraform_data: "{{ terraform_outputs.stdout | from_json }}"
+
+    - name: Extract server IP from Terraform outputs
+      set_fact:
+        dev_server_ip: "{{ terraform_data.dev_server_ip.value | default(terraform_data.ip_address.value) }}"
+      when: terraform_data.dev_server_ip is defined or terraform_data.ip_address is defined
+
+    - name: Display provisioned server information
+      debug:
+        msg: "Server provisioned with IP: {{ dev_server_ip }}"
+      when: dev_server_ip is defined
+
+    - name: Add provisioned server to dynamic inventory
+      add_host:
+        name: "kidora-dev-server"
+        ansible_host: "{{ dev_server_ip }}"
+        ansible_user: root
+      when: dev_server_ip is defined

@@ -1,11 +1,24 @@
 ---
-- import_playbook: docker.yml
-- import_playbook: minio_db_zot.yml
-- import_playbook: docompose.yml
-- import_playbook: ai_docker.yml
-- import_playbook: k3s.yml
-- import_playbook: helm.yml
-- import_playbook: mongodb.yml
-- import_playbook: minio.yml
-- import_playbook: zot.yml
-- import_playbook: monitoring.yml
+# Main entry point - redirect to environment-specific playbooks
+# Usage:
+#   ansible-playbook playbooks/main.yml
+#
+# To use environment-specific playbooks, run:
+#   ansible-playbook playbooks/dev/main.yml
+#   ansible-playbook playbooks/preprod/main.yml
+#   ansible-playbook playbooks/prod/main.yml
+#
+# Or use the unified launcher with environment variable:
+#   ENV=dev ansible-playbook playbooks/main.yml
+
+- name: Provision infrastructure (dev environment)
+  import_playbook: dev/main.yml
+  when: env == 'dev' or env is not defined
+
+- name: Provision infrastructure (preprod environment)
+  import_playbook: preprod/main.yml
+  when: env == 'preprod'
+
+- name: Provision infrastructure (prod environment)
+  import_playbook: prod/main.yml
+  when: env == 'prod'

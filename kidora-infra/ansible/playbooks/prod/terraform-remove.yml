@@ -1,0 +1,62 @@
+---
+- name: Remove infrastructure with Terraform (prod)
+  hosts: localhost
+  gather_facts: false
+  become: false
+  vars:
+    terraform_dir: "{{ playbook_dir }}/../../../terraform/environments/prod"
+  tasks:
+    - name: Confirm Terraform directory exists
+      stat:
+        path: "{{ terraform_dir }}"
+      register: terraform_dir_stat
+
+    - name: Fail if Terraform directory not found
+      fail:
+        msg: "Terraform directory not found at {{ terraform_dir }}"
+      when: not terraform_dir_stat.stat.exists
+
+    - name: Check if Terraform is initialized
+      stat:
+        path: "{{ terraform_dir }}/.terraform"
+      register: terraform_init_stat
+
+    - name: Display destruction warning
+      debug:
+        msg:
+          - "WARNING: This will destroy all Terraform-managed resources!"
+          - "Environment: prod"
+          - "Directory: {{ terraform_dir }}"
+
+    - name: Get current Terraform resources (plan destroy)
+      command: terraform plan -destroy -out=tfplan-destroy
+      args:
+        chdir: "{{ terraform_dir }}"
+      register: terraform_plan_destroy
+      changed_when: false
+      when: terraform_init_stat.stat.exists
+
+    - name: Destroy Terraform resources
+      command: terraform apply -auto-approve tfplan-destroy
+      args:
+        chdir: "{{ terraform_dir }}"
+      register: terraform_destroy
+      when: terraform_init_stat.stat.exists
+
+    - name: Display destruction result
+      debug:
+        msg: "Infrastructure destroyed successfully"
+      when: terraform_destroy is defined and terraform_destroy.rc == 0
+
+    - name: Clean up Terraform plan files
+      file:
+        path: "{{ terraform_dir }}/{{ item }}"
+        state: absent
+      loop:
+        - tfplan
+        - tfplan-destroy
+      when: terraform_init_stat.stat.exists
+
+    - name: Final confirmation
+      debug:
+        msg: "All Terraform resources for prod environment have been removed"

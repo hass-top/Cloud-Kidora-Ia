@@ -1,4 +1,13 @@
 ---
+# Tailscale configuration
+# Auth key is managed via Ansible Vault (inventories/*/group_vars/vault.yml)
+tailscale_accept_routes: true
+tailscale_accept_dns: true
+tailscale_exit_node_enabled: false
+tailscale_exit_node_ip: ""
+tailscale_tags: []
+tailscale_force_reconnect: false
+
 # Firewall configuration - Staging (preprod)
 firewall_allowed_ports:
   - 22
