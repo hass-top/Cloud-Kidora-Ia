@@ -26,7 +26,7 @@
       delay: 5
 
     - name: Add Tailscale GPG key
-      shell: curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/focal.gpg | apt-key add -
+      shell: curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.gpg | apt-key add -
       args:
         creates: /etc/apt/trusted.gpg.d/tailscale-archive-keyring.gpg
       register: gpg_task
@@ -35,7 +35,7 @@
       delay: 5
 
     - name: Add Tailscale repository
-      shell: curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/focal.list | tee /etc/apt/sources.list.d/tailscale.list
+      shell: curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.list | tee /etc/apt/sources.list.d/tailscale.list
       args:
         creates: /etc/apt/sources.list.d/tailscale.list
       register: repo_task
