@@ -22,11 +22,7 @@ variable "firewall_id" {
   default = null
 }
 
-variable "vpc_id" {
-  description = "VPC ID to attach the instance to"
-  type        = string
-  default     = null
-}
+
 
 variable "ssh_key_id" {
   description = "SSH key ID to attach to the instance"
