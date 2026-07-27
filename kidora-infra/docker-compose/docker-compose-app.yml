@@ -1,19 +1,14 @@
-# Kidora Infrastructure - Docker Compose
-# Main orchestration file
+# Kidora Application - Docker Compose
+# Phase 2: Application delivery (after building & pushing to local Zot registry)
 
 version: '3.8'
 
-# Include all service files
 include:
-  - services/01-minio.yml
-  - services/02-mongodb.yml
-  - services/03-zot.yml
   - services/04-backend.yml
   - services/05-ai-backend.yml
   - services/06-frontend.yml
   - services/07-nginx.yml
 
-# Define shared network
 networks:
   kidora_net:
     driver: bridge

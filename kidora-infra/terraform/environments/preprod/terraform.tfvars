@@ -1,5 +1,5 @@
 region = "fra"
-plan   = "vc2-2c-4gb"
+plan   = "vc2-2c-2gb"
 os_id  = 2284
 
 ssh_key_name = "kidora-preprod-key"

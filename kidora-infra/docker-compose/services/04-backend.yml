@@ -1,6 +1,6 @@
 services:
   backend:
-    image: fra.vultrcr.com/kidora/kidora-backend:v1.0.0
+    image: localhost:5000/kidora-backend:latest
     container_name: backend
     restart: unless-stopped
     depends_on:

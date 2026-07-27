@@ -1,0 +1,44 @@
+---
+- name: Deploy Application (Phase 2) - Backend, AI, Frontend, Nginx
+  hosts: all
+  become: true
+  vars_files:
+    - ../group_vars/all.yml
+
+  tasks:
+      - name: Ensure project directories exist
+        file:
+          path: "{{ item }}"
+          state: directory
+          mode: '0755'
+        loop:
+          - /opt/minio
+          - /opt/minio/services
+
+      - name: Copy application compose file
+        copy:
+          src: ../../docker-compose/docker-compose-app.yml
+          dest: /opt/minio/docker-compose-app.yml
+
+      - name: Copy application service files
+        copy:
+          src: "../../docker-compose/services/{{ item }}"
+          dest: "/opt/minio/services/{{ item }}"
+        loop:
+          - 04-backend.yml
+          - 05-ai-backend.yml
+          - 06-frontend.yml
+          - 07-nginx.yml
+
+      - name: Copy environment file
+        template:
+          src: ../templates/compose.env.j2
+          dest: /opt/minio/.env
+          mode: '0644'
+
+      - name: Start application services (Backend, AI, Frontend, Nginx)
+        community.docker.docker_compose_v2:
+          project_src: /opt/minio
+          files: docker-compose-app.yml
+          state: present
+          recreate: always

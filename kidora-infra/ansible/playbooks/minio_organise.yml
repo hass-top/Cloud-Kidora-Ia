@@ -1,0 +1,20 @@
+---
+- name: Configure MinIO anonymous public read+write access
+  hosts: k3s_master
+  become: yes
+  gather_facts: yes
+  vars_files:
+    - ../inventories/dev/group_vars/all.yml
+    - ../inventories/dev/group_vars/k3s.yml
+  tasks:
+    - name: Get MinIO pod name
+      shell: kubectl get pods -n minio -l app.kubernetes.io/name=minio -o jsonpath='{.items[0].metadata.name}'
+      register: minio_pod_name
+      changed_when: false
+
+    - name: Set anonymous public read+write on kidora bucket
+      shell: |
+        kubectl exec -n minio {{ minio_pod_name.stdout }} -- sh -c "mc alias set myminio http://localhost:9000 {{ minio_root_user }} {{ minio_root_password }} && mc anonymous set public /myminio/kidora"
+      register: mc_result
+      failed_when: false
+      changed_when: "'public' in mc_result.stdout"

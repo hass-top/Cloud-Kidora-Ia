@@ -1,0 +1,14 @@
+# Kidora Infrastructure - Docker Compose
+# Phase 1: Infrastructure bootstrap (Zot, databases, services)
+
+version: '3.8'
+
+include:
+  - services/01-minio.yml
+  - services/02-mongodb.yml
+  - services/03-zot.yml
+
+networks:
+  kidora_net:
+    driver: bridge
+    name: kidora_net

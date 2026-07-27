@@ -22,14 +22,14 @@ dev_accessible_paths:
 # Base directories for kidora
 kidora_directories:
   - path: /opt/kidora/app
-    owner: kidora_admin
+    owner: kidora_hassine
     group: kidora_admin
     mode: "0775"
   - path: /opt/kidora/deployments
-    owner: kidora_admin
+    owner: kidora_hassine
     group: kidora_admin
     mode: "0775"
   - path: /var/log/kidora
-    owner: kidora_admin
+    owner: kidora_hassine
     group: kidora_dev
     mode: "0775"

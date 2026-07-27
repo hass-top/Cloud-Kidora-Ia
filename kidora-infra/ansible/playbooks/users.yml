@@ -4,3 +4,15 @@
   become: true
   roles:
     - users
+
+- name: Update ansible connection to use kidora_hassine instead of root
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Update ansible connection after user creation
+      add_host:
+        name: "{{ inventory_hostname }}"
+        ansible_user: kidora_hassine
+        ansible_ssh_private_key_file: ~/.ssh/kidora_hassine
+      delegate_to: localhost
+      run_once: true

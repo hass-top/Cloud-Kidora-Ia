@@ -5,13 +5,6 @@
   vars:
     # Order: vault_tailscale_auth_key (from vault.yml) > TAILSCALE_AUTH_KEY env var > empty
     tailscale_auth_key: "{{ vault_tailscale_auth_key | default(ansible_env.TAILSCALE_AUTH_KEY | default('')) }}"
-    tailscale_accept_routes: "{{ tailscale_accept_routes | default(true) | bool }}"
-    tailscale_accept_dns: "{{ tailscale_accept_dns | default(true) | bool }}"
-    tailscale_exit_node_enabled: "{{ tailscale_exit_node_enabled | default(false) | bool }}"
-    tailscale_exit_node_ip: "{{ tailscale_exit_node_ip | default('') }}"
-    tailscale_tags: "{{ tailscale_tags | default([]) }}"
-    # If true, forces re-authentication every run. Default false.
-    tailscale_force_reconnect: "{{ tailscale_force_reconnect | default(false) | bool }}"
   tasks:
     - name: Install required packages for Tailscale repository
       apt:
@@ -25,30 +18,31 @@
       retries: 3
       delay: 5
 
-    - name: Add Tailscale GPG key
-      shell: curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.gpg | apt-key add -
-      args:
-        creates: /etc/apt/trusted.gpg.d/tailscale-archive-keyring.gpg
+    - name: Download Tailscale GPG key
+      get_url:
+        url: https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg
+        dest: /usr/share/keyrings/tailscale-archive-keyring.gpg
+        mode: '0644'
       register: gpg_task
       until: gpg_task is succeeded
       retries: 3
       delay: 5
 
+    - name: Remove any stale Tailscale apt sources (cleanup broken entries from previous runs)
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/apt/sources.list.d/tailscale.list
+        - /etc/apt/sources.list.d/tailscale.sources
+
     - name: Add Tailscale repository
-      shell: curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.list | tee /etc/apt/sources.list.d/tailscale.list
-      args:
-        creates: /etc/apt/sources.list.d/tailscale.list
+      apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/ubuntu noble main"
+        state: present
+        update_cache: yes
       register: repo_task
       until: repo_task is succeeded
-      retries: 3
-      delay: 5
-
-    - name: Update apt cache
-      apt:
-        update_cache: yes
-        cache_valid_time: 3600
-      register: update_task
-      until: update_task is succeeded
       retries: 3
       delay: 5
 
@@ -81,10 +75,10 @@
       set_fact:
         tailscale_up_args: >-
           --authkey {{ tailscale_auth_key }}
-          --accept-routes={{ tailscale_accept_routes | bool | lower }}
-          --accept-dns={{ tailscale_accept_dns | bool | lower }}
-          {% if tailscale_exit_node_enabled | bool %}--exit-node={{ tailscale_exit_node_ip }}{% endif %}
-          {{ '--reset' if tailscale_force_reconnect | bool else '' }}
+          --accept-routes={{ tailscale_accept_routes | default(true) | bool | lower }}
+          --accept-dns={{ tailscale_accept_dns | default(true) | bool | lower }}
+          {% if tailscale_exit_node_enabled | default(false) | bool %}--exit-node={{ tailscale_exit_node_ip | default('') }}{% endif %}
+          {{ '--reset' if tailscale_force_reconnect | default(false) | bool else '' }}
 
     - name: Authenticate Tailscale using auth key
       shell: "tailscale up {{ tailscale_up_args }}"

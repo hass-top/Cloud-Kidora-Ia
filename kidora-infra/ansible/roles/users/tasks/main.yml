@@ -74,7 +74,7 @@
     group: "{{ item.group }}"
     mode: "0600"
   loop: "{{ users_list }}"
-  ignore_errors: yes
+  when: lookup('ansible.builtin.fileglob', role_path + '/files/' + item.username + '_authorized_keys') | length > 0
 
 - name: Set up .bashrc with welcome message for all users
   copy:

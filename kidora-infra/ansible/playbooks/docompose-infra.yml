@@ -1,0 +1,52 @@
+---
+- name: Deploy Infrastructure (Phase 1) - MinIO, MongoDB, Zot
+  hosts: all
+  become: true
+  vars_files:
+    - ../group_vars/all.yml
+
+  tasks:
+      - name: Create project directories
+        file:
+          path: "{{ item }}"
+          state: directory
+          mode: '0755'
+        loop:
+          - /opt/minio
+          - /opt/minio/services
+          - /opt/zot
+          - /opt/zot/certs
+          - /opt/storage
+
+      - name: Copy infrastructure compose file
+        copy:
+          src: ../../docker-compose/docker-compose-infra.yml
+          dest: /opt/minio/docker-compose-infra.yml
+
+      - name: Copy infrastructure service files
+        copy:
+          src: "../../docker-compose/services/{{ item }}"
+          dest: "/opt/minio/services/{{ item }}"
+        loop:
+          - 01-minio.yml
+          - 02-mongodb.yml
+          - 03-zot.yml
+
+      - name: Copy zot config file
+        copy:
+          src: "../../docker-compose/config/config.json"
+          dest: /opt/zot/config.json
+          mode: '0644'
+
+      - name: Copy environment file
+        template:
+          src: ../templates/compose.env.j2
+          dest: /opt/minio/.env
+          mode: '0644'
+
+      - name: Start infrastructure services (MinIO, MongoDB, Zot)
+        community.docker.docker_compose_v2:
+          project_src: /opt/minio
+          files: docker-compose-infra.yml
+          state: present
+          recreate: always

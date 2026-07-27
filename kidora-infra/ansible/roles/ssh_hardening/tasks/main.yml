@@ -79,6 +79,20 @@
     - /etc/ssh/ssh_host_ecdsa_key
     - /etc/ssh/ssh_host_ecdsa_key.pub
 
+- name: Install fail2ban
+  apt:
+    name: fail2ban
+    state: present
+    update_cache: yes
+  register: fail2ban_install
+  retries: 3
+  delay: 5
+  until: fail2ban_install is succeeded
+
+- name: Set fact for fail2ban installed
+  set_fact:
+    fail2ban_installed: true
+
 - name: Configure fail2ban for SSH (if installed)
   template:
     src: jail.local.j2
@@ -86,7 +100,9 @@
     owner: root
     group: root
     mode: "0644"
-  when: ssh_fail2ban_enabled | default(true) | bool
+  when:
+    - ssh_fail2ban_enabled | default(true) | bool
+    - fail2ban_installed | default(false) | bool
   notify: restart fail2ban
   ignore_errors: yes
 
@@ -95,5 +111,7 @@
     name: fail2ban
     enabled: yes
     state: started
-  when: ssh_fail2ban_enabled | default(true) | bool
+  when:
+    - ssh_fail2ban_enabled | default(true) | bool
+    - fail2ban_installed | default(false) | bool
   ignore_errors: yes
