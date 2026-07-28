@@ -8,6 +8,7 @@ REGISTRY_LOCAL="localhost:5000"
 IMAGES=(
     "backend|kidora/kidora-backend|kidora-backend"
     "frontend|kidora-frontend|kidora-frontend"
+    "ai-backend|kidora/kidora-ai-backend|kidora-ai-backend"
 )
 
 echo "=========================================="
@@ -17,14 +18,16 @@ echo ""
 echo "Select image to sync:"
 echo "1) Backend"
 echo "2) Frontend"
-echo "3) Both"
+echo "3) AI Backend"
+echo "4) All"
 echo ""
-read -p "Enter choice [1-3]: " choice
+read -p "Enter choice [1-4]: " choice
 
 case $choice in
     1) SELECTED=("backend");;
     2) SELECTED=("frontend");;
-    3) SELECTED=("backend" "frontend");;
+    3) SELECTED=("ai-backend");;
+    4) SELECTED=("backend" "frontend" "ai-backend");;
     *) echo "Invalid choice"; exit 1;;
 esac
 
@@ -113,6 +116,10 @@ for img_key in "${SELECTED[@]}"; do
             frontend)
                 SERVICE_FILE="${SERVICE_FILE}/06-frontend.yml"
                 IMAGE_KEY="kidora-frontend"
+                ;;
+            ai-backend)
+                SERVICE_FILE="${SERVICE_FILE}/05-ai-backend.yml"
+                IMAGE_KEY="kidora-ai-backend"
                 ;;
         esac
 

@@ -1,6 +1,6 @@
 services:
   ai-backend:
-    image: localhost:5000/kidora-ai-backend:latest
+    image: fra.vultrcr.com/kidora/kidora-ai-backend:latest
     container_name: kidora_ai_backend
     restart: unless-stopped
     expose:
