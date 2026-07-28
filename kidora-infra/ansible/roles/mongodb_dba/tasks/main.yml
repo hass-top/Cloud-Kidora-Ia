@@ -1,0 +1,71 @@
+---
+- name: Wait for MongoDB to be ready
+  shell: docker exec mongodb mongosh --eval "db.adminCommand('ping')"
+  register: mongo_ping
+  retries: 10
+  delay: 5
+  until: mongo_ping.rc == 0
+  changed_when: false
+
+- name: Create application database
+  shell: |
+    docker exec mongodb mongosh -u {{ mongodb_root_username | default('root') }} -p '{{ mongodb_root_password }}' --authenticationDatabase admin --eval "
+      if (!db.getSiblingDB('{{ mongodb_database }}').getName()) {
+        db.getSiblingDB('{{ mongodb_database }}');
+        print('Database {{ mongodb_database }} created');
+      } else {
+        print('Database {{ mongodb_database }} already exists');
+      }
+    "
+  register: db_create
+  changed_when: "'created' in db_create.stdout"
+
+- name: Create application user
+  shell: |
+    docker exec mongodb mongosh -u {{ mongodb_root_username | default('root') }} -p '{{ mongodb_root_password }}' --authenticationDatabase admin --eval "
+      db.getSiblingDB('{{ mongodb_database }}').createUser({
+        user: '{{ mongodb_username }}',
+        pwd: '{{ mongodb_password }}',
+        roles: [
+          { role: 'readWrite', db: '{{ mongodb_database }}' },
+          { role: 'dbAdmin', db: '{{ mongodb_database }}' }
+        ]
+      });
+      print('User {{ mongodb_username }} created');
+    "
+  register: user_create
+  ignore_errors: yes
+  changed_when: "'created' in user_create.stdout"
+
+- name: Apply database indexes
+  shell: |
+    docker exec mongodb mongosh -u {{ mongodb_username }} -p '{{ mongodb_password }}' {{ mongodb_database }} --eval "
+      // Users collection indexes
+      db.users.createIndex({ 'email': 1 }, { unique: true });
+      db.users.createIndex({ 'phone': 1 }, { unique: true, sparse: true });
+      
+      // Enfants collection indexes
+      db.enfants.createIndex({ 'parentId': 1 });
+      db.enfants.createIndex({ 'schoolId': 1 });
+      
+      // Demande collection indexes
+      db.demandes.createIndex({ 'userId': 1 });
+      db.demandes.createIndex({ 'createdAt': -1 });
+      
+      // Chat messages indexes
+      db.chat_messages.createIndex({ 'conversationId': 1, 'createdAt': -1 });
+      
+      print('Indexes applied successfully');
+    "
+  register: indexes_apply
+  changed_when: "'Indexes applied' in indexes_apply.stdout"
+
+- name: Run migrations placeholder
+  shell: |
+    docker exec mongodb mongosh -u {{ mongodb_username }} -p '{{ mongodb_password }}' {{ mongodb_database }} --eval "
+      // Placeholder for migration scripts
+      // Add migration logic here or reference external migration files
+      print('Migrations completed');
+    "
+  register: migrations_run
+  changed_when: "'completed' in migrations_run.stdout"

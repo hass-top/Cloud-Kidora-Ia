@@ -1,0 +1,8 @@
+---
+- name: Initialize MongoDB database and user
+  hosts: all
+  become: true
+  vars_files:
+    - ../group_vars/all.yml
+  roles:
+    - mongodb_dba

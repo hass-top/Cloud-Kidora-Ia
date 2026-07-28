@@ -36,6 +36,18 @@
           dest: /opt/minio/.env
           mode: '0644'
 
+      - name: Ensure nginx config directory exists
+        file:
+          path: /opt/nginx/conf.d
+          state: directory
+          mode: '0755'
+
+      - name: Copy nginx configuration
+        copy:
+          src: ../files/nginx/conf.d/default.conf
+          dest: /opt/nginx/conf.d/default.conf
+          mode: '0644'
+
       - name: Start application services (Backend, AI, Frontend, Nginx)
         community.docker.docker_compose_v2:
           project_src: /opt/minio

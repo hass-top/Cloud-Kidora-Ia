@@ -1,11 +1,10 @@
 services:
   frontend:
-    image: localhost:5000/kidora-frontend:latest
+    image: fra.vultrcr.com/kidora/kidora-frontend:57b9955
     container_name: frontend
     restart: unless-stopped
-    depends_on:
-      - ai-backend
     expose:
       - "80"
     networks:
       - kidora_net
+    

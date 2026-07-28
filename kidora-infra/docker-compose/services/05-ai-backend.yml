@@ -27,6 +27,3 @@ services:
       - /opt/ai-backend/uploads:/app/uploads
     networks:
       - kidora_net
-    depends_on:
-      - mongodb
-      - minio

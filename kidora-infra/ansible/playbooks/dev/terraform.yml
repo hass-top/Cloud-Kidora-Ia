@@ -49,6 +49,18 @@
         msg: "Server provisioned with IP: {{ dev_server_ip }}"
       when: dev_server_ip is defined
 
+    - name: Generate Ansible inventory file
+      copy:
+        dest: "{{ playbook_dir }}/../../inventories/dev/hosts.ini"
+        content: |
+          [dev_servers]
+          kidora-dev-server ansible_host={{ dev_server_ip }} ansible_user=root ansible_ssh_private_key_file=/home/snofy/.ssh/kidora_ssh
+
+          [all:vars]
+          admin_user=root
+        mode: '0644'
+      when: dev_server_ip is defined
+
     - name: Add provisioned server to dynamic inventory
       add_host:
         name: "kidora-dev-server"

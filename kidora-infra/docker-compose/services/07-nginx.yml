@@ -6,7 +6,6 @@ services:
     depends_on:
       - frontend
       - backend
-      - ai-backend
     ports:
       - "80:80"
       - "443:443"

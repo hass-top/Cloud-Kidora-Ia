@@ -1,11 +1,8 @@
 services:
   backend:
-    image: localhost:5000/kidora-backend:latest
+    image: fra.vultrcr.com/kidora/kidora-backend:57b9955
     container_name: backend
     restart: unless-stopped
-    depends_on:
-      - mongodb
-      - minio
     volumes:
       - ./uploads:/app/uploads
     expose:

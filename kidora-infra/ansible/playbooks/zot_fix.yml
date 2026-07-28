@@ -1,0 +1,31 @@
+---
+- name: Fix Zot container configuration on the server
+  hosts: all
+  become: true
+  vars_files:
+    - ../group_vars/all.yml
+  tasks:
+    - name: Update Zot configuration file
+      copy:
+        src: ../files/config.json
+        dest: /opt/zot/config.json
+        mode: '0644'
+        backup: yes
+
+    - name: Restart Zot container
+      shell: docker restart zot
+      register: restart_result
+      changed_when: "'Restarting' in restart_result.stdout or restart_result.rc == 0"
+
+    - name: Wait for Zot to be ready
+      shell: docker exec zot curl -sf http://localhost:5000/v2/
+      register: zot_health
+      retries: 10
+      delay: 3
+      until: zot_health.rc == 0
+      changed_when: false
+
+    - name: Verify Zot is running
+      shell: docker ps --filter name=zot --format "{{.Names}} {{.Status}}"
+      register: zot_status
+      changed_when: false

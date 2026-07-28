@@ -6,5 +6,8 @@
 - import_playbook: "{{ playbook_dir }}/../firewall.yml"
 - import_playbook: "{{ playbook_dir }}/../ssh_hardening.yml"
 - import_playbook: "{{ playbook_dir }}/../docompose-infra.yml"
+- import_playbook: "{{ playbook_dir }}/../docompose-app.yml"
 - import_playbook: "{{ playbook_dir }}/../minio_organise.yml"
 - import_playbook: "{{ playbook_dir }}/../minio_directory_structure.yml"
+- import_playbook: "{{ playbook_dir }}/../mongodb_init.yml"
+
