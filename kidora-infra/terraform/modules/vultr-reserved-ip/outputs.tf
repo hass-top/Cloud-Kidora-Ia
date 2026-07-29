@@ -1,6 +1,6 @@
 output "reserved_ip_address" {
   description = "The reserved IP address"
-  value       = vultr_reserved_ip.this.address
+  value       = vultr_reserved_ip.this.ip_address
 }
 
 output "reserved_ip_id" {
