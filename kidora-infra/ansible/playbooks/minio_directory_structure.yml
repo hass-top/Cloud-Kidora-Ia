@@ -1,36 +1,32 @@
 ---
-- name: Create MinIO directory structure for kidora bucket
-  hosts: k3s_master
-  become: yes
-  gather_facts: yes
+- name: Create MinIO bucket structure for Kidora
+  hosts: all
+  become: true
+  gather_facts: false
   vars_files:
-    - ../inventories/dev/group_vars/all.yml
-    - ../inventories/dev/group_vars/k3s.yml
+    - ../group_vars/all.yml
   tasks:
-    - name: Get MinIO pod name
-      shell: kubectl get pods -n minio -l app.kubernetes.io/name=minio -o jsonpath='{.items[0].metadata.name}'
-      register: minio_pod_name
-      changed_when: false
+    - name: Create Kidora buckets
+      ansible.builtin.shell: |
+        docker exec minio mc alias set myminio http://localhost:9000 {{ minio_root_user }} {{ minio_root_password }}
+        docker exec minio mc mb --ignore-existing myminio/kidora
+        docker exec minio mc mb --ignore-existing myminio/kidora/enfants
+        docker exec minio mc mb --ignore-existing myminio/kidora/users
+        docker exec minio mc mb --ignore-existing myminio/kidora/ressources
+        docker exec minio mc mb --ignore-existing myminio/kidora/galerie
+        docker exec minio mc mb --ignore-existing myminio/kidora/demandes
+        docker exec minio mc mb --ignore-existing myminio/kidora/admins
+        docker exec minio mc mb --ignore-existing myminio/kidora/contrats
+        docker exec minio mc mb --ignore-existing myminio/kidora/certificats
+        docker exec minio mc mb --ignore-existing myminio/kidora/archives
+        docker exec minio mc mb --ignore-existing myminio/kidora/activities
+        docker exec minio mc mb --ignore-existing myminio/kidora/fournisseurs
+        docker exec minio mc mb --ignore-existing myminio/kidora/uploads
+        docker exec minio mc mb --ignore-existing myminio/kidora/chat
+      register: bucket_result
+      changed_when: bucket_result.rc == 0
+      failed_when: bucket_result.rc != 0
 
-    - name: Create directory structure in kidora bucket
-      shell: |
-        kubectl exec -n minio {{ minio_pod_name.stdout }} -- sh -c "
-        mc alias set myminio http://localhost:9000 {{ minio_root_user }} {{ minio_root_password }} &&
-        mc mb --ignore-existing myminio/kidora &&
-        mc mb --ignore-existing myminio/kidora/enfants &&
-        mc mb --ignore-existing myminio/kidora/users &&
-        mc mb --ignore-existing myminio/kidora/ressources &&
-        mc mb --ignore-existing myminio/kidora/galerie &&
-        mc mb --ignore-existing myminio/kidora/demandes &&
-        mc mb --ignore-existing myminio/kidora/admins &&
-        mc mb --ignore-existing myminio/kidora/contrats &&
-        mc mb --ignore-existing myminio/kidora/certificats &&
-        mc mb --ignore-existing myminio/kidora/archives &&
-        mc mb --ignore-existing myminio/kidora/activities &&
-        mc mb --ignore-existing myminio/kidora/fournisseurs &&
-        mc mb --ignore-existing myminio/kidora/uploads &&
-        mc mb --ignore-existing myminio/kidora/chat &&
-        echo 'Directories created'
-        "
-      register: dir_result
-      changed_when: "'Directories created' in dir_result.stdout"
+    - name: Display MinIO result
+      ansible.builtin.debug:
+        var: bucket_result.stdout

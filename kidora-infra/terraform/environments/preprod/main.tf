@@ -71,10 +71,30 @@ module "object_storage" {
   cluster = var.storage_cluster
 }
 
+module "preprod_reserved_ips" {
+  for_each = {
+    app        = "kidora-preprod-app"
+    database   = "kidora-preprod-db"
+    monitoring = "kidora-preprod-monitoring"
+  }
+
+  source      = "git::https://github.com/Moenes25/Cloud-Kidora-Ia.git//kidora-infra/terraform/modules/vultr-reserved-ip"
+  region      = var.region
+  label       = each.key
+  instance_id = module.preprod_servers[each.key].server_id
+}
+
 module "dns" {
   source  = "git::https://github.com/Moenes25/Cloud-Kidora-Ia.git//kidora-infra/terraform/modules/dns"
   domain  = var.dns_domain
-  records = var.dns_records
+  records = var.dns_records != [] ? var.dns_records : [
+    {
+      name     = "app"
+      type     = "A"
+      data     = module.preprod_reserved_ips["app"].reserved_ip_address
+      ttl      = 300
+    }
+  ]
 }
 
 resource "null_resource" "git_clone_repo" {

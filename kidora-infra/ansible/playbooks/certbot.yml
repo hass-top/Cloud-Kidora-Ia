@@ -2,5 +2,21 @@
 - name: Obtain and manage SSL certificates with Let's Encrypt
   hosts: all
   become: true
+  vars:
+    certbot_project_dir: /opt/minio
+  pre_tasks:
+    - name: Stop nginx container to free port 80
+      community.docker.docker_compose_v2:
+        project_src: "{{ certbot_project_dir }}"
+        files: docker-compose-app.yml
+        services: nginx
+        state: absent
   roles:
     - certbot
+  post_tasks:
+    - name: Start nginx container after certificate issuance
+      community.docker.docker_compose_v2:
+        project_src: "{{ certbot_project_dir }}"
+        files: docker-compose-app.yml
+        services: nginx
+        state: present
