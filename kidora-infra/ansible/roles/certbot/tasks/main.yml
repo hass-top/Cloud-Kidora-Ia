@@ -1,29 +1,32 @@
 ---
-- name: Add certbot PPA for Ubuntu
-  apt_repository:
-    repo: "ppa:certbot/certbot"
+- name: Ensure snapd is installed
+  apt:
+    name: snapd
     state: present
   when: ansible_os_family == "Debian"
 
-- name: Update apt cache
-  apt:
-    update_cache: yes
+- name: Ensure core snap is installed
+  command: snap install core
+  args:
+    creates: /snap/core/current
+  register: snap_core_result
+  changed_when: "'installed' in snap_core_result.stdout"
   when: ansible_os_family == "Debian"
 
-- name: Install certbot and nginx plugin
-  apt:
-    name: "{{ item }}"
-    state: present
-  loop:
-    - certbot
-    - python3-certbot-nginx
-  when: certbot_install_nginx_plugin
+- name: Install certbot via snap
+  command: snap install certbot --classic
+  args:
+    creates: /snap/bin/certbot
+  register: snap_certbot_result
+  changed_when: "'installed' in snap_certbot_result.stdout"
+  when: ansible_os_family == "Debian"
 
-- name: Install certbot (without nginx plugin)
-  apt:
-    name: certbot
-    state: present
-  when: not certbot_install_nginx_plugin
+- name: Create symlink for certbot command
+  file:
+    src: /snap/bin/certbot
+    dest: /usr/bin/certbot
+    state: link
+  when: ansible_os_family == "Debian"
 
 - name: Create webroot directory for standalone mode
   file:

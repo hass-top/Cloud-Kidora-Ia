@@ -6,7 +6,7 @@ certbot_domains:
 certbot_email: "admin@kidora.com"
 
 # Installation options
-certbot_install_nginx_plugin: true
+certbot_install_nginx_plugin: false
 certbot_install_apache_plugin: false
 
 # Certificate options

@@ -41,21 +41,3 @@ variable "ssh_public_key" {
   type        = string
 }
 
-
-variable "dns_domain" {
-  description = "DNS domain name"
-  type        = string
-  default     = "kidora-dev.com"
-}
-
-variable "dns_records" {
-  description = "List of DNS records"
-  type = list(object({
-    name     = string
-    type     = string
-    data     = string
-    ttl      = number
-    priority = optional(number)
-  }))
-  default = []
-}
