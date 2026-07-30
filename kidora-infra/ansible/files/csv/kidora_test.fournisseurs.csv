@@ -1,0 +1,11 @@
+_id,nom,email,telephone,adresse,etablissementId,actif,createdAt,updatedAt,_class,numeroSiret,numeroTVA,iban,swift
+6a5e251f27c8198225ba66aa,test2,test@gmail.com,25641789,test,6a3cfd9b6b97b6b70cd34dac,true,2026-07-20T13:39:43.721Z,2026-07-21T12:31:28.652Z,tn.kidora.spring.kidorabackoffice.entities.finance.Fournisseur,,,,
+6a5e279027c8198225ba66ab,test,test@gmail.com,25641789,test,6a3cfd9b6b97b6b70cd34dac,true,2026-07-20T13:50:08.795Z,2026-07-20T13:50:08.795Z,tn.kidora.spring.kidorabackoffice.entities.finance.Fournisseur,,,,
+6a5e3ad99b6a8eb9aa89c205,ea,zza@gmail.Com,5432,er,6a3cfd9b6b97b6b70cd34dac,true,2026-07-20T15:12:25.544Z,2026-07-20T15:12:25.544Z,tn.kidora.spring.kidorabackoffice.entities.finance.Fournisseur,,,,
+6a5e3af59b6a8eb9aa89c206,ee,ee@gmail.Com,5432,re,6a3cfd9b6b97b6b70cd34dac,true,2026-07-20T15:12:53.603Z,2026-07-20T15:12:53.603Z,tn.kidora.spring.kidorabackoffice.entities.finance.Fournisseur,,,,
+6a5e3b2d9b6a8eb9aa89c207,z,test@gmail.com,58642759,zea,6a3cfd9b6b97b6b70cd34dac,true,2026-07-20T15:13:49.261Z,2026-07-20T15:13:49.261Z,tn.kidora.spring.kidorabackoffice.entities.finance.Fournisseur,,,,
+6a5e85d603756d60c63a3507,Fatma Barrani barranifatma18,barranifatma18@gmail.com,25684123,ariena,6a3cfd9b6b97b6b70cd34dac,true,2026-07-20T20:32:22.851Z,2026-07-20T20:32:22.851Z,tn.kidora.spring.kidorabackoffice.entities.finance.Fournisseur,,,,
+6a5e7999e1adab7cd9813fca,ahmrd,aeazeaze@gmail.Cpù,8754623,ezrre,6a3cfd9b6b97b6b70cd34dac,true,2026-07-20T19:40:09.041Z,2026-07-20T19:40:09.041Z,tn.kidora.spring.kidorabackoffice.entities.finance.Fournisseur,,,,
+6a5f6599f9673ff175a9bcdb,test,test,test,test,6a3cfd9b6b97b6b70cd34dac,true,2026-07-21T12:27:05.373Z,2026-07-21T12:27:05.373Z,tn.kidora.spring.kidorabackoffice.entities.finance.Fournisseur,string,string,string,string
+6a5f666ff9673ff175a9bcdc,Fatma Barrani barranifatma182,barranifatma18@gmail.com,25641789,test,,true,2026-07-21T12:30:39.072Z,2026-07-21T12:30:39.072Z,tn.kidora.spring.kidorabackoffice.entities.finance.Fournisseur,,,,
+6a63ae9c57b1051ae63c6455,fournisseur ,barranifatma18@gmail.com,25687941,ariena,,true,2026-07-24T18:27:40.814Z,2026-07-24T18:27:40.814Z,tn.kidora.spring.kidorabackoffice.entities.finance.Fournisseur,,,,

@@ -1,0 +1,46 @@
+---
+- name: Upload images to MinIO
+  hosts: all
+  become: true
+  gather_facts: false
+  vars_files:
+    - ../group_vars/all.yml
+  vars:
+    images_src_dir: "../files/images"
+    images_dest_dir: "/opt/data_automation/images"
+    minio_bucket: "kidora"
+    minio_target_path: "uploads/screenshots"
+
+  tasks:
+    - name: Ensure images directory exists on target
+      file:
+        path: "{{ images_dest_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy images to target
+      copy:
+        src: "{{ images_src_dir }}/"
+        dest: "{{ images_dest_dir }}/"
+        mode: '0644'
+
+    - name: Configure MinIO alias
+      ansible.builtin.shell: |
+        docker exec minio mc alias set myminio http://localhost:9000 {{ minio_root_user }} {{ minio_root_password }}
+      register: alias_result
+      changed_when: "'Added' in alias_result.stdout or 'already' in alias_result.stdout"
+
+    - name: Ensure target path exists in MinIO
+      ansible.builtin.shell: |
+        docker exec minio mc mb --ignore-existing myminio/{{ minio_bucket }}/{{ minio_target_path }}
+      register: mb_result
+      changed_when: "'already' not in mb_result.stderr"
+
+    - name: Upload images to MinIO
+      ansible.builtin.shell: |
+        for img in {{ images_dest_dir }}/*.png; do
+          filename=$(basename "$img")
+          docker exec minio mc cp "$img" "myminio/{{ minio_bucket }}/{{ minio_target_path }}/$filename"
+        done
+      register: upload_result
+      changed_when: upload_result.rc == 0

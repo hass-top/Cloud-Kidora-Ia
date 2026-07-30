@@ -1,0 +1,2 @@
+_id,titre,description,categorie,datePublication,dateEvenement,classeIds[0],publicCible[0],priorite,_class
+6a5976969382bd156953916b,Reunion parents-educateurs,Point pedagogique prevu vendredi a 16h.,Reunion,2026-07-16T08:00:00.000Z,2026-07-19T15:00:00.000Z,6a4774ac9992f1b3e3af2e30,EDUCATEUR,normale,tn.kidora.spring.kidorabackoffice.entities.school.Actualite

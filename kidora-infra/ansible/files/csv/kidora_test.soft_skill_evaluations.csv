@@ -1,0 +1,2 @@
+_id,enfantId,classeId,dateEvaluation,scores.autonomie,scores.cooperation,scores.communication,scores.confiance,scores.empathie,competenceDominante,commentaire,enfant,classe,_class
+6a59f5cfe9c41eeae63267c7,6a3d91504c6437655e66cb7e,6a3d405de63c66b20edcc95b,2026-07-17T23:00:00.000Z,8,9,10,8,10,Empathie,,"{""$ref"":""Enfants"",""$id"":{""$oid"":""6a3d91504c6437655e66cb7e""}}","{""$ref"":""classes"",""$id"":{""$oid"":""6a3d405de63c66b20edcc95b""}}",tn.kidora.spring.kidorabackoffice.entities.softskills.SoftSkillEvaluation

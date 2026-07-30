@@ -13,5 +13,8 @@ firewall_allowed_ports:
   - 22
   - 80
   - 443
+  - 8086
+  - 9000
+  - 9001
 
 firewall_default_policy: deny

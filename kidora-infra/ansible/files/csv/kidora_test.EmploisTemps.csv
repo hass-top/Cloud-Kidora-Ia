@@ -1,0 +1,15 @@
+_id,classe,educateur,jourSemaine,typeActivities,heureDebut,heureFin,salle,_class
+6a3dc130b63cc291eedb6986,6a3d8318dd51e8344daac584,6a3d84f7d443c8a8eb513812,MONDAY,creatif,00:59,13:59,jlk,tn.kidora.spring.kidorabackoffice.entities.school.EmploisTemps
+6a3dc16db63cc291eedb6987,6a3d8318dd51e8344daac584,6a3d84f7d443c8a8eb513812,MONDAY,sportif,08:00,10:00,jkljlj,tn.kidora.spring.kidorabackoffice.entities.school.EmploisTemps
+6a49623774624dbcdc2a3a13,6a4774ac9992f1b3e3af2e30,6a426f067b1e12d95e00f4fb,MONDAY,creatif,08:00,10:00,504,tn.kidora.spring.kidorabackoffice.entities.school.EmploisTemps
+6a49625e74624dbcdc2a3a14,6a4774ac9992f1b3e3af2e30,6a426f067b1e12d95e00f4fb,MONDAY,creatif,22:00,23:00,re,tn.kidora.spring.kidorabackoffice.entities.school.EmploisTemps
+6a49655e74624dbcdc2a3a15,6a4774ac9992f1b3e3af2e30,6a3dc8bdb63cc291eedb698e,MONDAY,creatif,08:00,10:00,45,tn.kidora.spring.kidorabackoffice.entities.school.EmploisTemps
+6a49658d74624dbcdc2a3a16,6a3d8318dd51e8344daac584,6a426f067b1e12d95e00f4fb,MONDAY,creatif,05:00,06:00,,tn.kidora.spring.kidorabackoffice.entities.school.EmploisTemps
+6a49a83cc2d00ef5bfcd0b54,6a3cfe5c6b97b6b70cd34db1,6a3cf685661891dfcf8dbb48,TUESDAY,educatif,09:00,10:00,c204,tn.kidora.spring.kidorabackoffice.entities.school.EmploisTemps
+6a4a8b02c6dc0832409cbb59,6a3cfe5c6b97b6b70cd34db1,6a4776489992f1b3e3af2e32,THURSDAY,,10:00,11:00,203,tn.kidora.spring.kidorabackoffice.entities.school.EmploisTemps
+6a4a8b6ec6dc0832409cbb5a,6a3cfe5c6b97b6b70cd34db1,6a426f067b1e12d95e00f4fb,FRIDAY,educatif,15:00,16:00,,tn.kidora.spring.kidorabackoffice.entities.school.EmploisTemps
+6a4abbb404cfb4f333244221,6a4774ac9992f1b3e3af2e30,6a3dc8bdb63cc291eedb698e,MONDAY,creatif,09:00,10:00,548,tn.kidora.spring.kidorabackoffice.entities.school.EmploisTemps
+6a4abdd704cfb4f333244222,6a4774ac9992f1b3e3af2e30,6a3dd9f9d4b3fa6cc3e48617,MONDAY,creatif,10:00,11:00,48,tn.kidora.spring.kidorabackoffice.entities.school.EmploisTemps
+6a4adb9962e390761834fc26,6a3cfe5c6b97b6b70cd34db2,6a4776489992f1b3e3af2e32,MONDAY,creatif,10:00,11:00,55,tn.kidora.spring.kidorabackoffice.entities.school.EmploisTemps
+6a4af05362e390761834fc3f,6a3cfe5c6b97b6b70cd34db2,6a4776489992f1b3e3af2e32,TUESDAY,creatif,09:00,10:00,,tn.kidora.spring.kidorabackoffice.entities.school.EmploisTemps
+6a68d876cf8267ea9493fcf4,6a3cfe5c6b97b6b70cd34db1,6a5fb4ac136dfe5cdce1a089,MONDAY,sportif,09:00,11:00,20,tn.kidora.spring.kidorabackoffice.entities.school.EmploisTemps

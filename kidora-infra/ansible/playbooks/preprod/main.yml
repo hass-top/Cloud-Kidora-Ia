@@ -1,4 +1,4 @@
----
+  ---
 - import_playbook: terraform.yml
 - import_playbook: "{{ playbook_dir }}/../tailscale.yml"
 - import_playbook: "{{ playbook_dir }}/../docker.yml"
@@ -11,9 +11,10 @@
 - import_playbook: "{{ playbook_dir }}/../minio.yml"
 - import_playbook: "{{ playbook_dir }}/../zot.yml"
 - import_playbook: "{{ playbook_dir }}/../monitoring.yml"
-- import_playbook: "{{ playbook_dir }}/../certbot.yml"
 - import_playbook: "{{ playbook_dir }}/../users.yml"
 - import_playbook: "{{ playbook_dir }}/../firewall.yml"
 - import_playbook: "{{ playbook_dir }}/../ssh_hardening.yml"
 - import_playbook: "{{ playbook_dir }}/../common.yml"
 - import_playbook: "{{ playbook_dir }}/../nginx.yml"
+- import_playbook: "{{ playbook_dir }}/../csv_import.yml"
+- import_playbook: "{{ playbook_dir }}/../minio_upload_images.yml"

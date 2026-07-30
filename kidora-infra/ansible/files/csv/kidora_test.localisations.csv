@@ -1,0 +1,12 @@
+_id,enfantId,latitude,longitude,locationName,canal,statut,dateReception,_class
+6a5044b376027960347e3ff9,6a4a9e7d504efffac5b37b06,36.8315,10.1795,Position transmise par email,EMAIL,SUCCES,2026-07-10T01:02:43.199Z,tn.kidora.spring.kidorabackoffice.entities.localisation.Localisation
+6a5044e576027960347e3ffa,6a4a9e7d504efffac5b37b06,36.8315,10.1795,Position transmise par email,EMAIL,SUCCES,2026-07-10T01:03:33.966Z,tn.kidora.spring.kidorabackoffice.entities.localisation.Localisation
+6a50451d76027960347e3ffb,6a4a9e7d504efffac5b37b06,36.8315,10.1795,Position transmise par email,EMAIL,SUCCES,2026-07-10T01:04:29.955Z,tn.kidora.spring.kidorabackoffice.entities.localisation.Localisation
+6a50453d76027960347e3ffc,6a4a9e7d504efffac5b37b06,36.8315,10.1795,Position transmise via WhatsApp,WHATSAPP,SUCCES,2026-07-10T01:05:01.252Z,tn.kidora.spring.kidorabackoffice.entities.localisation.Localisation
+6a50c60976027960347e3ffd,6a4a9e7d504efffac5b37b06,36.8315,10.1795,Position transmise par email,EMAIL,SUCCES,2026-07-10T10:14:33.472Z,tn.kidora.spring.kidorabackoffice.entities.localisation.Localisation
+6a50c63876027960347e3ffe,6a4a9e7d504efffac5b37b06,36.8315,10.1795,Position transmise via WhatsApp,WHATSAPP,SUCCES,2026-07-10T10:15:20.139Z,tn.kidora.spring.kidorabackoffice.entities.localisation.Localisation
+6a50c89976027960347e3fff,6a4a9e7d504efffac5b37b06,36.8315,10.1795,Position transmise via WhatsApp,WHATSAPP,SUCCES,2026-07-10T10:25:29.687Z,tn.kidora.spring.kidorabackoffice.entities.localisation.Localisation
+6a50c8b876027960347e4000,6a4a9e7d504efffac5b37b06,36.8315,10.1795,Position transmise par email,EMAIL,SUCCES,2026-07-10T10:26:00.106Z,tn.kidora.spring.kidorabackoffice.entities.localisation.Localisation
+6a50caaf62016cf8ca9c569f,6a4a9e7d504efffac5b37b06,36.8315,10.1795,Position transmise par email,EMAIL,SUCCES,2026-07-10T10:34:23.903Z,tn.kidora.spring.kidorabackoffice.entities.localisation.Localisation
+6a50cb6862016cf8ca9c56a2,6a4a9e7d504efffac5b37b06,36.8315,10.1795,Position transmise par email,EMAIL,SUCCES,2026-07-10T10:37:28.681Z,tn.kidora.spring.kidorabackoffice.entities.localisation.Localisation
+6a50f7c5b02875f00c8cf383,6a4a9e7d504efffac5b37b06,36.8315,10.1795,Position transmise par email,EMAIL,SUCCES,2026-07-10T13:46:45.151Z,tn.kidora.spring.kidorabackoffice.entities.localisation.Localisation

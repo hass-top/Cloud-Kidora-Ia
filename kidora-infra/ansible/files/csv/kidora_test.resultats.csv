@@ -1,0 +1,4 @@
+_id,enfant,exercice,statut,tempsPasseSecondes,reponses[0],_class
+6a4bb772b71c6ace41db7bc2,6a4a9e7d504efffac5b37b06,6a4bb771b71c6ace41db7bc1,EN_COURS,30,3,tn.kidora.spring.kidorabackoffice.entities.activity.Resultat
+6a4bb7bfb71c6ace41db7bc9,6a4a9e7d504efffac5b37b06,6a4bb7bdb71c6ace41db7bc8,EN_COURS,30,3,tn.kidora.spring.kidorabackoffice.entities.activity.Resultat
+6a4bb7d9b71c6ace41db7bcc,6a4a9e7d504efffac5b37b06,6a4bb7d3b71c6ace41db7bcb,EN_COURS,30,3,tn.kidora.spring.kidorabackoffice.entities.activity.Resultat

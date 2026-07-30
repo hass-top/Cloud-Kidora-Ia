@@ -1,0 +1,12 @@
+_id,nomParent,prenomParent,enfant,age,source,date,stage,telephone,etablissementId,_class
+p1,Camille,Faure,Noah,2 ans,Site web,2026-06-28T00:00:00.000Z,NOUVEAU,06 12 34 56 78,6a3cfd9b6b97b6b70cd34dac,
+p2,Hugo,Lambert,Lina,3 ans,Recommandation,2026-06-25T00:00:00.000Z,CONTACTE,06 98 76 54 32,6a3cfd9b6b97b6b70cd34dac,
+p3,Sarah,Petit,Tom,18 mois,Réseaux sociaux,2026-06-20T00:00:00.000Z,VISITE,07 11 22 33 44,6a3cfd9b6b97b6b70cd34dac,
+p4,Karim,Belkacem,Yasmine,4 ans,Salon petite enfance,2026-06-15T00:00:00.000Z,CONVERTI,06 55 66 77 88,6a3cfd9b6b97b6b70cd34dac,
+p5,Elise,Dubreuil,Maël,2 ans,Site web,2026-06-10T00:00:00.000Z,PERDU,06 22 11 99 00,6a3cfd9b6b97b6b70cd34dac,
+6a495f5ab4db9113294afbb5,ezae,ezae,ez,5,Partenariat,2026-07-03T23:00:00.000Z,CONVERTI,1254862,6a3cfd9b6b97b6b70cd34dac,tn.kidora.spring.kidorabackoffice.entities.crm.Prospect
+6a591d8c1b07ec5669298118,fezf,rezrr,rezr,2,Réseaux sociaux,2026-07-15T23:00:00.000Z,CONTACTE,05689455,,tn.kidora.spring.kidorabackoffice.entities.crm.Prospect
+6a591db21b07ec5669298119,fdf,df,ezrz,5,Site web,2026-07-15T23:00:00.000Z,NOUVEAU,056245579,,tn.kidora.spring.kidorabackoffice.entities.crm.Prospect
+6a5a059a534c469f6acc525c,eze,ze,ezae,3,Salon petite enfance,2026-07-16T23:00:00.000Z,CONVERTI,125647851,,tn.kidora.spring.kidorabackoffice.entities.crm.Prospect
+6a6743df8e7ffd781fe22c30,Mohamed,ali,fras,4ans,Site web,2022-07-27T07:00:00.000Z,VISITE,58610978,6a3cfd9b6b97b6b70cd34dac,tn.kidora.spring.kidorabackoffice.entities.crm.Prospect
+6a68d5d31c978e13b01277af,test,test,test2,3,Site web,2026-07-28T00:00:00.000Z,NOUVEAU,25658147,6a3cfd9b6b97b6b70cd34dac,tn.kidora.spring.kidorabackoffice.entities.crm.Prospect

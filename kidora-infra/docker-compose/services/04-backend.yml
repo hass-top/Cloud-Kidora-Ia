@@ -1,6 +1,6 @@
 services:
   backend:
-    image: fra.vultrcr.com/kidora/kidora-backend:57b9955
+    image: fra.vultrcr.com/kidora/kidora-backend:latest
     container_name: backend
     restart: unless-stopped
     volumes:

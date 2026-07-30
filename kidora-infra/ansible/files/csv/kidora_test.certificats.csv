@@ -1,0 +1,3 @@
+_id,nom,type,fichierUrl,dateEmission,statut,createdAt,updatedAt,_class
+6a5cc22514f136ffdf58944f,Engagement,AUTRE,http://209.222.10.132:9000/kidora/1784463906866_af6b3df6.pdf,2026-07-18T23:00:00.000Z,VALIDE,2026-07-19T12:25:09.601Z,2026-07-19T12:25:09.601Z,tn.kidora.spring.kidorabackoffice.entities.finance.Certificat
+6a5cc24914f136ffdf589450,emploi_du_temps_Classe Alpha,AUTRE,http://209.222.10.132:9000/kidora/1784463944604_155fe3f5.pdf,2026-07-18T23:00:00.000Z,VALIDE,2026-07-19T12:25:45.197Z,2026-07-19T12:25:45.197Z,tn.kidora.spring.kidorabackoffice.entities.finance.Certificat

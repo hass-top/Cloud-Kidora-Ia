@@ -1,0 +1,58 @@
+---
+- name: Ensure CSV directory exists on target
+  file:
+    path: "{{ csv_dest_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Ensure import script directory exists on target
+  file:
+    path: "{{ import_script_dest | dirname }}"
+    state: directory
+    mode: '0755'
+
+- name: Copy CSV files to target
+  copy:
+    src: "{{ csv_src_dir }}/"
+    dest: "{{ csv_dest_dir }}/"
+    mode: '0644'
+
+- name: Copy import script to target
+  copy:
+    src: "{{ import_script_src }}"
+    dest: "{{ import_script_dest }}"
+    mode: '0755'
+
+- name: Install python3-pip
+  apt:
+    name: python3-pip
+    state: present
+    update_cache: yes
+
+- name: Install python3-pymongo package
+  apt:
+    name: python3-pymongo
+    state: present
+
+- name: Wait for MongoDB to be ready
+  shell: docker exec mongodb mongosh --eval "db.adminCommand('ping')"
+  register: mongo_ping
+  retries: 10
+  delay: 5
+  until: mongo_ping.rc == 0
+  changed_when: false
+
+- name: Import CSV files into MongoDB
+  shell: |
+    python3 {{ import_script_dest }} \
+      --csv-dir {{ csv_dest_dir }} \
+      {% if drop_collections_before_import %}--drop{% endif %}
+  environment:
+    MONGO_HOST: "127.0.0.1"
+    MONGO_PORT: "{{ mongo_port }}"
+    MONGO_USER: "{{ mongodb_root_username | default('admin') }}"
+    MONGO_PASSWORD: "{{ mongodb_root_password }}"
+    MONGO_DB: "{{ mongodb_database | default('kidora') }}"
+    MONGO_AUTH_DB: "{{ mongo_auth_db }}"
+  register: import_result
+  changed_when: "'Inserted' in import_result.stdout"

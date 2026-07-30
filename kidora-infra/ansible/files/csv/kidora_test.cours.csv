@@ -1,0 +1,3 @@
+_id,titre,matiere,classeIds[0],statut,description,fichiers[0].name,fichiers[0].type,fichiers[0].url,chapitres[0],chapitres[1],chapitres[2],chapitres[3],_class
+6a5943f44aa3baf74f3791ea,Découvrir les formes géométriques - V5,Mathématiques,6a4774ac9992f1b3e3af2e30,TERMINE,Ajout d'un nouveau chapitre.,formes-v5.pdf,PDF,/api/files/cours/formes-v5.pdf,6a5945454aa3baf74f3791eb,6a5943f44aa3baf74f3791e8,6a5956b7bce94343cf3a0e67,6a5957babce94343cf3a0e68,tn.kidora.spring.kidorabackoffice.entities.cours.Cours
+6a5f35ce664ecf859a689607,test,Dessin,6a3d405de63c66b20edcc95b,PUBLIE,test,README.pdf,PDF,,,,,,tn.kidora.spring.kidorabackoffice.entities.cours.Cours

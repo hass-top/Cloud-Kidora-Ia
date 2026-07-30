@@ -1,0 +1,5 @@
+_id,enfant,parent,classe,dateInscription,statut,paiement,etablissementId
+i1,Yasmine Belkacem,Karim Belkacem,Moyenne section,2026-06-18T00:00:00.000Z,ACTIVE,A_JOUR,6a3cfd9b6b97b6b70cd34dac
+i2,Adam Roche,Inès Roche,Petite section,2026-05-02T00:00:00.000Z,ACTIVE,RETARD,6a3cfd9b6b97b6b70cd34dac
+i3,Chloé Bernard,Sophie Bernard,Grande section,2026-04-14T00:00:00.000Z,EN_COURS,A_JOUR,6a3cfd9b6b97b6b70cd34dac
+i4,Ilyes Dupont,Yanis Dupont,Crèche - bébés,2026-03-03T00:00:00.000Z,SUSPENDUE,RETARD,6a3cfd9b6b97b6b70cd34dac

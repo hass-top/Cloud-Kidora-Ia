@@ -1,0 +1,8 @@
+---
+- name: Import CSV data into MongoDB
+  hosts: all
+  become: true
+  vars_files:
+    - ../group_vars/all.yml
+  roles:
+    - csv_import

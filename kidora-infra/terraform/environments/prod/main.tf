@@ -54,6 +54,27 @@ module "firewall" {
       ip_type="v4"
       subnet="0.0.0.0"
       subnet_size=24
+    },
+    {
+      protocol="tcp"
+      port="8086"
+      ip_type="v4"
+      subnet="0.0.0.0"
+      subnet_size=0
+    },
+    {
+      protocol="tcp"
+      port="9000"
+      ip_type="v4"
+      subnet="0.0.0.0"
+      subnet_size=0
+    },
+    {
+      protocol="tcp"
+      port="9001"
+      ip_type="v4"
+      subnet="0.0.0.0"
+      subnet_size=0
     }
   ]
 }

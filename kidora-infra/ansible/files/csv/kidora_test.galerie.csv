@@ -1,0 +1,8 @@
+_id,imageUrl,enfant,_class
+6a4e55f888d542618c0fd7a5,/api/auth/uploads/1783518712552_077f3828.png,"{""$ref"":""Enfants"",""$id"":{""$oid"":""6a4a9e7d504efffac5b37b06""}}",tn.kidora.spring.kidorabackoffice.entities.media.Galerie
+6a4e566388d542618c0fd7a6,/api/auth/uploads/1783518819238_e59c6567.png,"{""$ref"":""Enfants"",""$id"":{""$oid"":""6a4a9e7d504efffac5b37b06""}}",tn.kidora.spring.kidorabackoffice.entities.media.Galerie
+6a4f05606b09fbe9f56c3810,/api/auth/uploads/1783563616974_db064b40.png,"{""$ref"":""Enfants"",""$id"":{""$oid"":""6a3d91504c6437655e66cb7e""}}",tn.kidora.spring.kidorabackoffice.entities.media.Galerie
+6a4f05736b09fbe9f56c3811,/api/auth/uploads/1783563635705_f3aff790.png,"{""$ref"":""Enfants"",""$id"":{""$oid"":""6a4a9e7d504efffac5b37b06""}}",tn.kidora.spring.kidorabackoffice.entities.media.Galerie
+6a5052f40fd22cd6359f0973,/api/auth/uploads/1783649012244_defa8745.png,"{""$ref"":""Enfants"",""$id"":{""$oid"":""6a4a9e7d504efffac5b37b06""}}",tn.kidora.spring.kidorabackoffice.entities.media.Galerie
+6a5053010fd22cd6359f0974,/api/auth/uploads/1783649025503_1facb86d.png,"{""$ref"":""Enfants"",""$id"":{""$oid"":""6a4a9e7d504efffac5b37b06""}}",tn.kidora.spring.kidorabackoffice.entities.media.Galerie
+6a690adc91dbdaec100b0c97,/api/auth/uploads/1785268956591_55c442f9.png,"{""$ref"":""Enfants"",""$id"":{""$oid"":""6a3d91504c6437655e66cb7e""}}",tn.kidora.spring.kidorabackoffice.entities.media.Galerie

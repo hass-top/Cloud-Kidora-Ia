@@ -1,0 +1,13 @@
+_id,entityName,recordName,action,adminName,adminRegion,establishmentName,dateAction,_class
+6a3db602b63cc291eedb6980,Evenement,rzer,Création d'événement,Inconnu,Casablanca-Settat,École Les Petits Génies,2026-06-25T23:13:06.489Z,tn.kidora.spring.kidorabackoffice.entities.audit.AuditLog
+6a3db60ab63cc291eedb6982,Evenement,eree,Création d'événement,Inconnu,Casablanca-Settat,École Les Petits Génies,2026-06-25T23:13:14.015Z,tn.kidora.spring.kidorabackoffice.entities.audit.AuditLog
+6a3db618b63cc291eedb6984,Evenement,rerree,Création d'événement,Inconnu,Casablanca-Settat,École Les Petits Génies,2026-06-25T23:13:28.823Z,tn.kidora.spring.kidorabackoffice.entities.audit.AuditLog
+6a468f666a77ffea71d86a73,Evenement,test,Création d'événement,Inconnu,Casablanca-Settat,École Les Petits Génies,2026-07-02T16:18:46.969Z,tn.kidora.spring.kidorabackoffice.entities.audit.AuditLog
+6a468ab88dd046c1c075f515,Etablissement,École Les Petits Génies gass,Modification d'établissement,Inconnu,Casablanca-Settat,,2026-07-02T15:58:48.618Z,tn.kidora.spring.kidorabackoffice.entities.audit.AuditLog
+6a477b9ca60a200e4aeccd9a,Evenement,fre,Création d'événement,Inconnu,Casablanca-Settat,École Les Petits Génies gass,2026-07-03T09:06:36.882Z,tn.kidora.spring.kidorabackoffice.entities.audit.AuditLog
+6a477b9ea60a200e4aeccd9c,Evenement,fre,Création d'événement,Inconnu,Casablanca-Settat,École Les Petits Génies gass,2026-07-03T09:06:38.466Z,tn.kidora.spring.kidorabackoffice.entities.audit.AuditLog
+6a477bd3a60a200e4aeccd9e,Evenement,fre,Suppression d'événement,Inconnu,Casablanca-Settat,École Les Petits Génies gass,2026-07-03T09:07:31.344Z,tn.kidora.spring.kidorabackoffice.entities.audit.AuditLog
+6a477bdea60a200e4aeccd9f,Evenement,errzr,Création d'événement,Inconnu,Casablanca-Settat,École Les Petits Génies gass,2026-07-03T09:07:42.951Z,tn.kidora.spring.kidorabackoffice.entities.audit.AuditLog
+6a49a7a0c2d00ef5bfcd0b53,Evenement,fre,Suppression d'événement,Inconnu,Casablanca-Settat,École Les Petits Génies gass,2026-07-05T00:38:56.036Z,tn.kidora.spring.kidorabackoffice.entities.audit.AuditLog
+6a57f2721cc1c96809f38531,Evenement,er,Création d'événement,Inconnu,Casablanca-Settat,École Les Petits Génies gass,2026-07-15T20:49:54.075Z,tn.kidora.spring.kidorabackoffice.entities.audit.AuditLog
+6a57f2721cc1c96809f38533,Evenement,er,Création d'événement,Inconnu,Casablanca-Settat,École Les Petits Génies gass,2026-07-15T20:49:54.809Z,tn.kidora.spring.kidorabackoffice.entities.audit.AuditLog

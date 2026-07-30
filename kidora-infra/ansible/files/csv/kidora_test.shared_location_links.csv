@@ -1,0 +1,7 @@
+_id,enfantId,token,createdAt,expiresAt,_class
+6a50ca7b62016cf8ca9c569d,6a4a9e7d504efffac5b37b06,b7eda0ed-1ea8-4123-81ea-ee4de7dec5cf,2026-07-10T10:33:31.740Z,2026-07-17T10:33:31.740Z,tn.kidora.spring.kidorabackoffice.entities.localisation.SharedLocationLink
+6a50caae62016cf8ca9c569e,6a4a9e7d504efffac5b37b06,f13c782d-4a5e-4f51-ac72-fc7a95f4b395,2026-07-10T10:34:22.034Z,2026-07-17T10:34:22.034Z,tn.kidora.spring.kidorabackoffice.entities.localisation.SharedLocationLink
+6a50cab162016cf8ca9c56a0,6a4a9e7d504efffac5b37b06,6608e55f-316a-4bc2-9b24-9fe554225d2a,2026-07-10T10:34:25.419Z,2026-07-17T10:34:25.419Z,tn.kidora.spring.kidorabackoffice.entities.localisation.SharedLocationLink
+6a50cb6662016cf8ca9c56a1,6a4a9e7d504efffac5b37b06,5628dc60-dfef-4379-9941-855053c60c10,2026-07-10T10:37:26.974Z,2026-07-17T10:37:26.974Z,tn.kidora.spring.kidorabackoffice.entities.localisation.SharedLocationLink
+6a50cb6b62016cf8ca9c56a3,6a4a9e7d504efffac5b37b06,742b021d-1eef-434c-861d-564c310956b5,2026-07-10T10:37:31.736Z,2026-07-17T10:37:31.736Z,tn.kidora.spring.kidorabackoffice.entities.localisation.SharedLocationLink
+6a50f7c2b02875f00c8cf382,6a4a9e7d504efffac5b37b06,8da8ca63-e505-4029-8b25-fab3405380d8,2026-07-10T13:46:42.609Z,2026-07-17T13:46:42.609Z,tn.kidora.spring.kidorabackoffice.entities.localisation.SharedLocationLink

@@ -1,0 +1,14 @@
+_id,ordre,titre,description,statut,fichiers[0].name,fichiers[0].type,fichiers[0].url,_class
+6a5943f44aa3baf74f3791e7,1,Introduction aux formes - Mise à jour,Présentation des formes géométriques avec de nouveaux exemples.,PUBLIE,intro.pdf,PDF,/api/files/chapitres/intro.pdf,tn.kidora.spring.kidorabackoffice.entities.cours.Chapitre
+6a5943f44aa3baf74f3791e8,2,Reconnaître les formes,Identifier les formes.,PUBLIE,,,,tn.kidora.spring.kidorabackoffice.entities.cours.Chapitre
+6a5945454aa3baf74f3791eb,1,Introduction,Présentation mise à jour.,PUBLIE,,,,tn.kidora.spring.kidorabackoffice.entities.cours.Chapitre
+6a5945464aa3baf74f3791ec,,,,,,,,tn.kidora.spring.kidorabackoffice.entities.cours.Chapitre
+6a5945464aa3baf74f3791ed,,,,,,,,tn.kidora.spring.kidorabackoffice.entities.cours.Chapitre
+6a5951f96ba9df7ab626954f,1,Découverte des animaux,Présentation des principaux animaux de la ferme.,PUBLIE,chapitre1.pdf,PDF,/api/files/chapitres/chapitre1.pdf,tn.kidora.spring.kidorabackoffice.entities.cours.Chapitre
+6a5951f96ba9df7ab6269550,2,Les aliments des animaux,Comprendre ce que mangent les différents animaux.,BROUILLON,,,,tn.kidora.spring.kidorabackoffice.entities.cours.Chapitre
+6a5951f96ba9df7ab6269551,3,Quiz de révision,Évaluer les connaissances acquises sur les animaux de la ferme.,ARCHIVE,quiz.pdf,PDF,/api/files/chapitres/quiz.pdf,tn.kidora.spring.kidorabackoffice.entities.cours.Chapitre
+6a59557bbce94343cf3a0e63,1,Chapitre provenant d'un autre cours,Ce chapitre ne devrait pas pouvoir être associé à ce cours.,PUBLIE,,,,tn.kidora.spring.kidorabackoffice.entities.cours.Chapitre
+6a59557bbce94343cf3a0e64,2,Reconnaître les formes dans la vie quotidienne,Identifier les formes géométriques dans les objets de tous les jours.,PUBLIE,,,,tn.kidora.spring.kidorabackoffice.entities.cours.Chapitre
+6a59557bbce94343cf3a0e65,3,Exercices pratiques - Corrigés,Exercices avec corrigés pour consolider les acquis.,BROUILLON,,,,tn.kidora.spring.kidorabackoffice.entities.cours.Chapitre
+6a5956b7bce94343cf3a0e67,3,Les solides géométriques,"Découvrir le cube, la sphère et le cylindre.",BROUILLON,solides.pdf,PDF,/api/files/chapitres/solides.pdf,tn.kidora.spring.kidorabackoffice.entities.cours.Chapitre
+6a5957babce94343cf3a0e68,4,Évaluation finale,Quiz et exercices d'évaluation sur les formes géométriques.,BROUILLON,evaluation.pdf,PDF,/api/files/chapitres/evaluation.pdf,tn.kidora.spring.kidorabackoffice.entities.cours.Chapitre

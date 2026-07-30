@@ -1,0 +1,2 @@
+_id,date_rdv,heure_debut,statut,objet,duree,type_rendezvous,note,parent,psy,enfant,_class
+6a5df6737139f275853c051f,2026-07-16,09:00:00,CONFIRME,Suivi psycho,30,PRESENTIEL,important,"{""$ref"":""users"",""$id"":{""$oid"":""6a46427111e17276c5f28519""}}","{""$ref"":""users"",""$id"":{""$oid"":""6a492e66cce10640be1f862a""}}","{""$ref"":""Enfants"",""$id"":{""$oid"":""6a4953a174eef952544d1503""}}",tn.kidora.spring.kidorabackoffice.entities.communication.scheduling.Rendezvous

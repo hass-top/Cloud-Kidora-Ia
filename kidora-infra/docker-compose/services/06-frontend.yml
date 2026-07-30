@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: fra.vultrcr.com/kidora/kidora-frontend:57b9955
+    image: fra.vultrcr.com/kidora/kidora-frontend:latest
     container_name: frontend
     restart: unless-stopped
     expose:

@@ -1,0 +1,2 @@
+_id,banque,intitule,iban,solde,devise,statut,createdAt,updatedAt,_class
+6a5d36a7aff8c7ccd9f5c1e1,ze,8452,87542,0.008,TND,cloture,2026-07-19T20:42:15.382Z,2026-07-19T20:42:55.148Z,tn.kidora.spring.kidorabackoffice.entities.finance.CompteBancaire

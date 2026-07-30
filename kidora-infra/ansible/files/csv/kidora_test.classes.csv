@@ -1,0 +1,15 @@
+_id,nom,description,couleur,anneeScolaire,capacite,salle,etablissement,_class
+6a3cfe5c6b97b6b70cd34db1,Classe Alpha,Classe maternelle niveau 1,#3B82F6,PRIMAIRE,20,A101,6a3cfd9b6b97b6b70cd34dac,
+6a3cfe5c6b97b6b70cd34db2,Classe Beta,Classe maternelle niveau 2,#10B981,PRIMAIRE,22,A102,6a3cfd9b6b97b6b70cd34dac,
+6a3cfe5c6b97b6b70cd34db3,Classe CP,Cours préparatoire,#F59E0B,PRIMAIRE,25,B101,6a3cfd9b6b97b6b70cd34dad,
+6a3cfe5c6b97b6b70cd34db4,Classe CE1,Cours élémentaire 1,#EF4444,PRIMAIRE,25,B102,6a3cfd9b6b97b6b70cd34dad,
+6a3cfe5c6b97b6b70cd34db5,Classe 6ème,Première année collège,#8B5CF6,COLLEGE,30,C101,6a3cfd9b6b97b6b70cd34dae,
+6a3cfe5c6b97b6b70cd34db6,Classe Horizon A,Classe du centre Horizon,#06B6D4,PRIMAIRE,24,H101,6a3cfd9b6b97b6b70cd34daf,
+6a3d4026e63c66b20edcc95a,Classe C4,Classe maternelle niveau 4,blue,,20,yyy,6a3cfd9b6b97b6b70cd34dac,tn.kidora.spring.kidorabackoffice.entities.school.Classes
+6a3d405de63c66b20edcc95b,class 1er a,Classe maternelle niveau 4,green,,22,,6a3cfd9b6b97b6b70cd34dac,tn.kidora.spring.kidorabackoffice.entities.school.Classes
+6a3d8318dd51e8344daac584,Classe b2,Classe maternelle niveau 4,pink,,20,,6a3cfd9b6b97b6b70cd34dac,tn.kidora.spring.kidorabackoffice.entities.school.Classes
+6a47730d470fd05c999d0916,Classe Gamma,Nouvelle classe niveau 3,#F59E0B,PRIMAIRE,25,A103,6a3cfd9b6b97b6b70cd34dac,
+6a4774ac9992f1b3e3af2e30,Classe Delta,Classe maternelle niveau 2,#3B82F6,GARDERIE,20,A105,6a3cfd9b6b97b6b70cd34dac,tn.kidora.spring.kidorabackoffice.entities.school.Classes
+6a3d8318dd51e8344daac585,Classe Epsilon,Classe maternelle niveau 3,#8B5CF6,PRIMAIRE,25,A106,6a3cfd9b6b97b6b70cd34dac,
+6a3d8318dd51e8344daac586,Classe Zeta,Classe Collège niveau 1,#EF4444,COLLEGE,30,B103,6a3cfd9b6b97b6b70cd34dac,
+6a3d8318dd51e8344daac587,Classe Eta,Classe Garderie niveau 2,#10B981,GARDERIE,15,A107,6a3cfd9b6b97b6b70cd34dac,

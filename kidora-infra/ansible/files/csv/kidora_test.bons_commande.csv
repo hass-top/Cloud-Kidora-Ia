@@ -1,0 +1,7 @@
+_id,reference,fournisseurId,fournisseurNom,etablissementId,montant,montantPaye,dateCommande,statut,createdAt,updatedAt,_class
+6a5e460eb30b06ac94544de9,BC-FD169249,f2,Cantine Services SARL,6a3cfd9b6b97b6b70cd34dac,0.006,0,2026-07-20T16:00:14.806Z,Reçu,2026-07-20T16:00:14.806Z,2026-07-20T16:00:14.806Z,tn.kidora.spring.kidorabackoffice.entities.finance.BonDeCommande
+6a5e4645b30b06ac94544dea,BC-D4CE76FD,f1,Papeterie Centrale,6a3cfd9b6b97b6b70cd34dac,0.006,0,2026-07-20T16:01:09.502Z,Annulé,2026-07-20T16:01:09.502Z,2026-07-25T17:30:20.078Z,tn.kidora.spring.kidorabackoffice.entities.finance.BonDeCommande
+6a5e46c4b30b06ac94544deb,BC-897A4E37,f2,Cantine Services SARL,6a3cfd9b6b97b6b70cd34dac,0.006,0,2026-07-20T16:03:16.566Z,Envoyé,2026-07-20T16:03:16.566Z,2026-07-20T16:03:16.566Z,tn.kidora.spring.kidorabackoffice.entities.finance.BonDeCommande
+6a5f69f5f9673ff175a9bcdd,BC-A05375C4,6a5f666ff9673ff175a9bcdc,Fatma Barrani barranifatma182,,250,0,2026-07-21T12:45:41.314Z,ENVOYE,2026-07-21T12:45:41.314Z,2026-07-25T15:14:16.361Z,tn.kidora.spring.kidorabackoffice.entities.finance.BonDeCommande
+6a64fffabb5aeda581dfa234,BC-2025,6a5e85d603756d60c63a3507,Fatma Barrani barranifatma18,,200,0,2026-07-25T00:00:00.000Z,ENVOYE,2026-07-25T18:27:06.881Z,2026-07-25T18:27:19.094Z,tn.kidora.spring.kidorabackoffice.entities.finance.BonDeCommande
+6a68d64a1c978e13b01277b1,BC-250,6a63ae9c57b1051ae63c6455,fournisseur ,,600,0,2026-07-28T00:00:00.000Z,ENVOYE,2026-07-28T16:18:18.850Z,2026-07-28T16:19:02.843Z,tn.kidora.spring.kidorabackoffice.entities.finance.BonDeCommande

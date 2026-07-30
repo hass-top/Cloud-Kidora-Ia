@@ -1,0 +1,5 @@
+_id,enfant,parent,age,classeSouhaitee,position,depuis,priorite,etablissementId
+w1,Manon Girard,Claire Girard,2 ans,Petite section,1,2026-05-12T00:00:00.000Z,URGENTE,6a3cfd9b6b97b6b70cd34dac
+w2,Rayan Belkacem,Karim Belkacem,1 an,Crèche - bébés,2,2026-05-20T00:00:00.000Z,FRATRIE,6a3cfd9b6b97b6b70cd34dac
+w3,Jade Morel,Thomas Morel,3 ans,Moyenne section,3,2026-06-01T00:00:00.000Z,NORMALE,6a3cfd9b6b97b6b70cd34dac
+w4,Léo Fontaine,Anaïs Fontaine,4 ans,Grande section,4,2026-06-08T00:00:00.000Z,NORMALE,6a3cfd9b6b97b6b70cd34dac

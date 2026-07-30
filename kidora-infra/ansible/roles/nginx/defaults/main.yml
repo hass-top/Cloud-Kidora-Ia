@@ -1,8 +1,6 @@
 ---
 # Nginx configuration
 nginx_server_name: kidora.freeddns.org
-nginx_ssl_certificate: /etc/letsencrypt/live/kidora.freeddns.org-0001/fullchain.pem
-nginx_ssl_certificate_key: /etc/letsencrypt/live/kidora.freeddns.org-0001/privkey.pem
 
 # Upstream services
 nginx_frontend_url: http://frontend:80

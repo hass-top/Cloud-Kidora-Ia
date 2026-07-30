@@ -1,0 +1,14 @@
+---
+# MongoDB connection settings
+mongo_host: "mongodb"
+mongo_port: 27017
+mongo_auth_db: "admin"
+
+# CSV import settings
+csv_src_dir: "../files/csv"
+csv_dest_dir: "/opt/data_automation/csv"
+import_script_src: "import_csv_to_mongodb.py"
+import_script_dest: "/opt/data_automation/import_csv_to_mongodb.py"
+
+# Whether to drop collections before import (false = skip duplicates)
+drop_collections_before_import: false
