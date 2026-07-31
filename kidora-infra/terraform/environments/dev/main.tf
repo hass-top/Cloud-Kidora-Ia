@@ -21,6 +21,23 @@ module "dev_reserved_ip" {
   instance_id = module.dev_server.server_id
 }
 
+module "dev_server_2" {
+  source       = "git::https://github.com/Moenes25/Cloud-Kidora-Ia.git//kidora-infra/terraform/modules/vultr-server"
+  name         = "kidora-dev-server-2"
+  region       = var.region
+  plan         = var.plan
+  os_id        = var.os_id
+  ssh_key_id   = module.ssh_key.ssh_key_id
+  firewall_id  = module.firewall.firewall_id
+}
+
+module "dev_reserved_ip_2" {
+  source      = "git::https://github.com/Moenes25/Cloud-Kidora-Ia.git//kidora-infra/terraform/modules/vultr-reserved-ip"
+  region      = var.region
+  label       = "kidora-dev-reserved-ip-2"
+  instance_id = module.dev_server_2.server_id
+}
+
 module "firewall" {
   source = "git::https://github.com/Moenes25/Cloud-Kidora-Ia.git//kidora-infra/terraform/modules/firewall"
   firewall_name = "kidora-dev-firewall"
@@ -101,7 +118,8 @@ module "firewall" {
 # Generate Ansible inventory from template with the server IP
 resource "local_file" "ansible_inventory" {
   content = templatefile("${path.module}/inventory.tpl", {
-    dev_server_ip = module.dev_server.ip_address
+    dev_server_ip   = module.dev_server.ip_address
+    dev_server_2_ip = module.dev_server_2.ip_address
   })
   filename = abspath("${path.module}/../../../ansible/inventories/dev/hosts.ini")
 }
