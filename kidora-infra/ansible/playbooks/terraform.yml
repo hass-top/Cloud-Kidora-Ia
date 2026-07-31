@@ -39,9 +39,10 @@
       set_fact:
         terraform_data: "{{ terraform_outputs.stdout | from_json }}"
 
-    - name: Extract server IP from Terraform outputs
+    - name: Extract server IPs from Terraform outputs
       set_fact:
         dev_server_ip: "{{ terraform_data.dev_server_ip.value | default(terraform_data.ip_address.value) }}"
+        dev_server_2_ip: "{{ terraform_data.dev_server_2_ip.value }}"
       when: terraform_data.dev_server_ip is defined or terraform_data.ip_address is defined
 
     - name: Display provisioned server information
@@ -55,3 +56,10 @@
         ansible_host: "{{ dev_server_ip }}"
         ansible_user: root
       when: dev_server_ip is defined
+
+    - name: Add second provisioned server to dynamic inventory
+      add_host:
+        name: "kidora-dev-server-2"
+        ansible_host: "{{ dev_server_2_ip }}"
+        ansible_user: root
+      when: dev_server_2_ip is defined

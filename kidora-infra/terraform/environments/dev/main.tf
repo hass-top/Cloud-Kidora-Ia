@@ -88,6 +88,13 @@ module "firewall" {
       subnet = "0.0.0.0"
       subnet_size = 0
     },
+    {
+      protocol = "tcp"
+      port = "27017"
+      ip_type = "v4"
+      subnet = "0.0.0.0"
+      subnet_size = 0
+    },
   ]
 }
 
