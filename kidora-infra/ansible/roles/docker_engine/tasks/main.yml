@@ -1,0 +1,170 @@
+---
+# =============================================================================
+#  docker_engine — Docker CE + the deploy user + GHCR authentication
+# =============================================================================
+#  Runs on all three hosts (see playbooks/staging/10-docker.yml).
+# =============================================================================
+
+- name: Install the packages needed to add the Docker repository
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+      # deb822_repository drives `python3-debian` on the managed host; without
+      # it the task fails with "No module named debian". Installing it up front
+      # keeps the repository step a single idempotent apt transaction.
+      - python3-debian
+    state: present
+    update_cache: true
+
+- name: Create the apt keyring directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+# The key is fetched over HTTPS and fingerprinted before it is trusted, so a
+# hijacked mirror cannot inject its own repository key.
+- name: Download the Docker signing key
+  ansible.builtin.get_url:
+    url: "https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg"
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: De-armour the Docker signing key
+  ansible.builtin.command:
+    cmd: "gpg --dearmor -o /etc/apt/keyrings/docker.gpg /etc/apt/keyrings/docker.asc"
+    creates: /etc/apt/keyrings/docker.gpg
+
+# The previous apt_repository-based task wrote a one-line .list file. deb822
+# writes /etc/apt/sources.list.d/docker.sources instead, so the stale entry has
+# to go or apt sees the same repository twice and warns on every run.
+- name: Remove the legacy Docker apt list file
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/docker.list
+    state: absent
+
+- name: Add the Docker apt repository
+  ansible.builtin.deb822_repository:
+    name: docker
+    types: [deb]
+    uris: "https://download.docker.com/linux/{{ ansible_distribution | lower }}"
+    suites: ["{{ ansible_distribution_release }}"]
+    components: [stable]
+    architectures: ["{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}"]
+    signed_by: /etc/apt/keyrings/docker.gpg
+    state: present
+  # deb822_repository deliberately does not refresh the cache itself, so the
+  # update is a separate task below rather than a module option.
+  notify: refresh apt cache
+
+- name: Install Docker CE and the Compose v2 plugin
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      # Every playbook in this stack drives Compose through
+      # community.docker.docker_compose_v2, which shells out to the CLI plugin.
+      # Without it the tasks fail even though a `docker-compose` binary exists.
+      - docker-compose-plugin
+    state: present
+    update_cache: true
+
+- name: Configure the Docker daemon
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": { "max-size": "10m", "max-file": "3" },
+        "live-restore": true,
+        "default-address-pools": [
+          { "base": "172.20.0.0/16", "size": 24 }
+        ]
+      }
+  notify: restart docker
+
+- name: Ensure Docker is running and enabled
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Wait for the Docker daemon to accept connections
+  ansible.builtin.command: docker info
+  register: docker_info
+  changed_when: false
+  until: docker_info.rc == 0
+  retries: 15
+  delay: 5
+
+# --- Deploy user -------------------------------------------------------------
+# The stacks are deployed by an unprivileged account in the `docker` group
+# rather than by root, so a compromised playbook cannot act as uid 0. Membership
+# of `docker` is effectively root-equivalent, which is the accepted trade-off:
+# it is scoped to this one purpose-built account and not to human operators.
+- name: Ensure the Docker group exists
+  ansible.builtin.group:
+    name: docker
+    state: present
+
+- name: Ensure the deploy group exists
+  ansible.builtin.group:
+    name: "{{ deploy_group }}"
+    state: present
+
+- name: Ensure the deploy user exists
+  ansible.builtin.user:
+    name: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    groups: docker
+    append: true
+    shell: /bin/bash
+    create_home: true
+    home: "/home/{{ deploy_user }}"
+    comment: "Kidora deployment account"
+    state: present
+
+- name: Ensure the deploy root directory exists
+  ansible.builtin.file:
+    path: "{{ deploy_root }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: "0755"
+
+# --- GitHub Container Registry ------------------------------------------------
+# The four application images are PRIVATE, so `docker compose pull` fails with a
+# 401 until credentials exist on the host. They are written once into
+# /opt/kidora/.docker/config.json (0600) and reused by every later run, which
+# is why a redeploy does not need the PAT again.
+- name: Authenticate to the GitHub Container Registry
+  ansible.builtin.template:
+    src: docker-config.json.j2
+    dest: "{{ deploy_root }}/.docker/config.json"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: "0600"
+    # The file contains a base64 PAT. Without no_log it is printed in full on
+    # every run.
+    no_log: true
+  when: vault_github_pat is defined and vault_github_pat | length > 0
+
+- name: Warn when no registry credentials are configured
+  ansible.builtin.debug:
+    msg:
+      - "WARNING: vault_github_pat is not set on {{ inventory_hostname }}."
+      - "  The Kidora images on ghcr.io are PRIVATE, so `docker compose pull`"
+      - "  will fail with 401 until you add it to the vault:"
+      - "    ansible-vault edit inventories/staging/group_vars/vault.yml"
+  when: vault_github_pat is not defined or vault_github_pat | length == 0

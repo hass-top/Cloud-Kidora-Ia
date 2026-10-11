@@ -1,0 +1,16 @@
+---
+# =============================================================================
+#  30 — Application: srv2 (MongoDB + backend + frontend + backoffice + AI + MinIO)
+# =============================================================================
+#  Everything that holds state or runs the Kidora product, on one host and in
+#  one Compose project.
+# =============================================================================
+
+- name: Application — deploy MongoDB, MinIO, backend, AI, frontend and backoffice
+  hosts: kidora_app
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: app_stack
+      tags: [app, application]

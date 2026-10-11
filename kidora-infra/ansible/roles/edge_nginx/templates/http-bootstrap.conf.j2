@@ -1,0 +1,28 @@
+# {{ ansible_managed }}
+# =============================================================================
+#  HTTP-only bootstrap vhost
+# =============================================================================
+#  Used ONLY on the very first run of 40-edge.yml, before certbot has issued a
+#  certificate. It answers the ACME challenge and redirects everything else, so
+#  the host is not left without a web server during bootstrap.
+#
+#  40-edge.yml replaces this file with kidora.conf as soon as the certificate
+#  exists. If you ever see this configuration in production, the certbot step
+#  failed and TLS is not being served.
+# =============================================================================
+
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root {{ certbot_webroot_path }};
+        default_type "text/plain";
+        allow all;
+    }
+
+    location / {
+        return 503 "TLS is not configured yet. Run playbooks/staging/40-edge.yml to completion.";
+    }
+}

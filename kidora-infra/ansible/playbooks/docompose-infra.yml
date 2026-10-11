@@ -1,5 +1,17 @@
 ---
-- name: Deploy Infrastructure (Phase 1) - MinIO, MongoDB, Zot
+# =============================================================================
+#  Deploy Infrastructure (Phase 1) - MinIO, MongoDB
+# =============================================================================
+#  Zot was removed from this playbook, together with
+#  docker-compose/services/03-zot.yml and docker-compose/config/config.json.
+#  Images are pulled from GitHub Container Registry now, so the host no longer
+#  needs a container registry of its own. (The Zot Kubernetes/Helm deployment
+#  in playbooks/zot.yml + roles/zot is a separate path and is untouched.)
+#
+#  This playbook previously created /opt/zot, /opt/zot/certs and /opt/storage
+#  and copied the Zot config; those tasks are gone with the service.
+# =============================================================================
+- name: Deploy Infrastructure (Phase 1) - MinIO, MongoDB
   hosts: all
   become: true
   vars_files:
@@ -10,13 +22,10 @@
         file:
           path: "{{ item }}"
           state: directory
-          mode: '0755'
+        mode: '0755'
         loop:
           - /opt/minio
           - /opt/minio/services
-          - /opt/zot
-          - /opt/zot/certs
-          - /opt/storage
 
       - name: Copy infrastructure compose file
         copy:
@@ -30,21 +39,14 @@
         loop:
           - 01-minio.yml
           - 02-mongodb.yml
-          - 03-zot.yml
-
-      - name: Copy zot config file
-        copy:
-          src: "../../docker-compose/config/config.json"
-          dest: /opt/zot/config.json
-          mode: '0644'
 
       - name: Copy environment file
         template:
           src: ../templates/compose.env.j2
           dest: /opt/minio/.env
-          mode: '0644'
+        mode: '0644'
 
-      - name: Start infrastructure services (MinIO, MongoDB, Zot)
+      - name: Start infrastructure services (MinIO, MongoDB)
         community.docker.docker_compose_v2:
           project_src: /opt/minio
           files: docker-compose-infra.yml

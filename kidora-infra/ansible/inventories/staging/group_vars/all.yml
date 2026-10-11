@@ -1,8 +1,112 @@
 ---
-# Firewall configuration - Staging (preprod)
-firewall_allowed_ports:
-  - 22
-  - 80
-  - 8086
+# =============================================================================
+#  Kidora — Staging :: variables shared by all three servers
+# =============================================================================
+#  No secrets live in this file (or in any other non-vault vars file).
+#  Everything sensitive is an encrypted Ansible Vault variable — see
+#  group_vars/vault.yml and the README in this directory.
+# =============================================================================
 
-firewall_default_policy: deny
+# --- Deployment identity ------------------------------------------------------
+environment: staging
+domain_name: kidora.freeddns.org
+
+# Unprivileged account that owns /opt/kidora. Docker is a root-privileged
+# daemon, so this user is in the `docker` group rather than running sudo.
+deploy_user: kidora
+deploy_group: kidora
+deploy_root: /opt/kidora
+
+# --- Peer addressing ----------------------------------------------------------
+# Resolved from the inventory, so there is a single source of truth for IPs.
+kidora_monitoring_ip: "{{ groups['kidora_monitoring'][0] }}"
+kidora_app_ip: "{{ groups['kidora_app'][0] }}"
+kidora_edge_ip: "{{ groups['kidora_edge'][0] }}"
+
+# --- Application images (GitHub Container Registry) ---------------------------
+# All four packages are PRIVATE. Authenticate once with:
+#     ansible-playbook playbooks/staging/10-docker.yml --ask-vault-pass
+# which stores credentials in /opt/kidora/.docker/config.json (mode 0600).
+#
+# Pin a build for reproducible staging runs, e.g. kidora-backend:1a2b3c4.
+app_images:
+  backend: "ghcr.io/hass-top/kidora-backend:latest"
+  frontend: "ghcr.io/hass-top/kidora-frontend:latest"
+  ai_backend: "ghcr.io/hass-top/kidora-ia-center:latest"
+  backoffice: "ghcr.io/hass-top/kidora-backoffice:latest"
+
+# --- Monitoring images --------------------------------------------------------
+# Pinned to explicit tags: `:latest` in a monitoring stack means an unattended
+# breaking upgrade of Prometheus or Grafana on the next `docker compose pull`.
+monitoring_images:
+  prometheus: "prom/prometheus:v2.54.1"
+  grafana: "grafana/grafana:11.2.0"
+  alertmanager: "prom/alertmanager:v0.27.0"
+  node_exporter: "prom/node-exporter:v1.8.2"
+  cadvisor: "gcr.io/cadvisor/cadvisor:v0.50.1"
+  mongo_exporter: "percona/mongodb_exporter:0.40.0"
+
+# --- Data / application defaults (non-secret) ---------------------------------
+mongodb_database: kidora
+mongodb_username: kidora_app
+minio_root_user: kidora_admin
+minio_bucket: kidora
+
+app_server_url: "https://{{ domain_name }}"
+allowed_origins: "https://{{ domain_name }},https://www.{{ domain_name }}"
+
+# --- AI service ---------------------------------------------------------------
+groq_model_name: llama-3.3-70b-versatile
+groq_vision_model: llama-3.2-90b-vision-preview
+llm_temperature: "0.7"
+llm_max_tokens: "2048"
+llm_memory_window: "10"
+log_level: INFO
+image_provider: gemini
+ai_app_name: "Generateur de Rapports Educatifs IA"
+
+# --- Tailscale ----------------------------------------------------------------
+# Keeps the backoffice (and, if you want, Grafana) off the public Internet.
+# The auth key is a Vault variable: vault_tailscale_auth_key.
+tailscale_enabled: true
+tailscale_accept_routes: false
+tailscale_accept_dns: false
+tailscale_exit_node_enabled: false
+tailscale_tags:
+  - tag:kidora-staging
+# Restricts the private backoffice vhost to the tailnet only.
+tailscale_cidr: "100.64.0.0/10"
+
+# --- Host hardening -----------------------------------------------------------
+# fail2ban jails sshd and nginx (edge only, see inventories/.../edge.yml).
+fail2ban_enabled: true
+fail2ban_sshd_maxretry: 5
+fail2ban_sshd_bantime: 1h
+fail2ban_sshd_findtime: 10m
+
+common_timezone: "Africa/Tunis"
+common_packages:
+  - curl
+  - wget
+  - git
+  - vim
+  - htop
+  - net-tools
+  - unzip
+  - ca-certificates
+  - gnupg
+  - lsb-release
+  - apt-transport-https
+  - software-properties-common
+  - tree
+  - tzdata
+  - systemd-timesyncd
+# NB: roles/common already configures and restarts systemd-timesyncd, so NTP
+# client packages (chrony / ntpsec) are deliberately NOT installed. Two NTP
+# daemons on one host fight each other and the host slowly drifts.
+common_ntp_servers:
+  - 0.ubuntu.pool.ntp.org
+  - 1.ubuntu.pool.ntp.org
+  - 2.ubuntu.pool.ntp.org
+  - 3.ubuntu.pool.ntp.org
+common_enable_unattended_upgrades: true

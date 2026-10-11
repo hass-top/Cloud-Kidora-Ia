@@ -1,0 +1,9 @@
+---
+# Defaults for the edge_nginx role.
+# Real values come from inventories/staging/group_vars/edge.yml.
+
+# Where certbot writes the live certificate. `--staging` does NOT change this
+# path: it only swaps the ACME endpoint, so the local layout is identical and
+# the same variables work before and after switching to production.
+ssl_certificate_path: /etc/letsencrypt/live/{{ domain_name }}/fullchain.pem
+ssl_certificate_key_path: /etc/letsencrypt/live/{{ domain_name }}/privkey.pem

@@ -1,0 +1,21 @@
+---
+# =============================================================================
+#  10 — Docker: every server
+# =============================================================================
+#  Installs Docker CE, creates the `kidora` deploy account and writes the GHCR
+#  credentials. Every later playbook drives Compose through the `kidora` user.
+#
+#  FIRST RUN ONLY — this needs the registry token:
+#      ansible-playbook -i inventories/staging/hosts.ini \
+#        playbooks/staging/10-docker.yml --ask-vault-pass
+#  Later runs read the cached credentials from the host and need no token.
+# =============================================================================
+
+- name: Docker — install the engine and the deploy user on every server
+  hosts: kidora
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: docker_engine
+      tags: [docker, base]

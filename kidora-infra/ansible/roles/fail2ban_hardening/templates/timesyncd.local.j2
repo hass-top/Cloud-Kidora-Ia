@@ -1,0 +1,4 @@
+# Ubuntu's packaged systemd-timesyncd jail uses a journal match that fail2ban
+# cannot parse, and the failure aborts startup for every other jail.
+[systemd-timesyncd]
+enabled = false

@@ -1,0 +1,8 @@
+---
+# Defaults for the certbot_webroot role.
+# Real values come from inventories/staging/group_vars/edge.yml.
+
+# The name certbot files the certificate under. It becomes the directory in
+# /etc/letsencrypt/live/, so it must match ssl_certificate_path in
+# roles/edge_nginx/defaults/main.yml.
+certbot_cert_name: "{{ domain_name }}"

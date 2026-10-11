@@ -1,0 +1,176 @@
+# {{ ansible_managed }}
+# =============================================================================
+#  Public vhost — kidora.freeddns.org
+# =============================================================================
+#  Everything the public sees. TLS terminates here; the upstreams are on the
+#  app and monitoring servers.
+# =============================================================================
+
+# Redirect to the canonical host, so a request to www.<domain> does not serve a
+# second copy of the SPA from a different origin.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {{ domain_name }} www.{{ domain_name }};
+
+    # ACME HTTP-01. Must stay reachable over plain HTTP and must NOT be
+    # redirected, or certbot can never renew.
+    location ^~ /.well-known/acme-challenge/ {
+        root {{ certbot_webroot_path }};
+        default_type "text/plain";
+        allow all;
+    }
+
+    location / {
+        return 301 https://{{ domain_name }}$request_uri;
+    }
+}
+
+{% for extra in certbot_domains %}
+{% if extra != domain_name %}
+# --- {{ extra }} ------------------------------------------------------------
+# The certificate covers {{ extra }}, so a request for it is not a TLS error —
+# it is served by the first vhost it matches. That would be the backoffice
+# block, so redirect explicitly instead of letting the wrong site answer.
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name {{ extra }};
+
+    ssl_certificate     {{ ssl_certificate_path }};
+    ssl_certificate_key {{ ssl_certificate_key_path }};
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    return 301 https://{{ domain_name }}$request_uri;
+}
+{% endif %}
+{% endfor %}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name {{ domain_name }};
+
+    ssl_certificate     {{ ssl_certificate_path }};
+    ssl_certificate_key {{ ssl_certificate_key_path }};
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+
+    # `always` covers every response including errors, which is the point: a
+    # browser must learn the HTTPS rule before it hits a failure page.
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Cap concurrent connections per IP so one client cannot exhaust the
+    # worker's connection budget (worker_connections is {{ nginx_worker_connections }}).
+    limit_conn kidora_conn 50;
+
+    # --- Frontend ------------------------------------------------------------
+    location / {
+        limit_req zone=kidora_api burst=50 nodelay;
+        proxy_pass http://kidora_frontend;
+        include /etc/nginx/snippets/kidora-proxy.conf;
+    }
+
+    # --- Spring Boot REST API ------------------------------------------------
+    # No trailing path on proxy_pass: the full URI is forwarded, so the backend
+    # still sees /api/... exactly as it would behind the dev nginx.
+    location /api/ {
+        limit_req zone=kidora_api burst=50 nodelay;
+        proxy_pass http://kidora_backend;
+        include /etc/nginx/snippets/kidora-proxy.conf;
+    }
+
+    # --- Mobile app API ------------------------------------------------------
+    # The controllers_mobile/* endpoints; same upstream, separate rate-limit
+    # budget so mobile traffic cannot starve the web UI.
+    location /mobile/ {
+        limit_req zone=kidora_api burst=50 nodelay;
+        proxy_pass http://kidora_backend;
+        include /etc/nginx/snippets/kidora-proxy.conf;
+    }
+
+    # --- WebSocket (SockJS) --------------------------------------------------
+    # Without the Upgrade/Connection headers and http_version 1.1 this location
+    # returns 200 to the handshake and then hangs forever.
+    location /ws/ {
+        proxy_pass http://kidora_backend;
+        include /etc/nginx/snippets/kidora-proxy.conf;
+        proxy_set_header Upgrade    $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # --- AI service ----------------------------------------------------------
+    # Generation is slow and expensive upstream, so it gets a tighter budget
+    # than the REST API.
+    location /ai/ {
+        limit_req zone=kidora_ai burst=10 nodelay;
+        proxy_pass http://kidora_ai/;
+        include /etc/nginx/snippets/kidora-proxy.conf;
+    }
+
+    location /api/ai/ {
+        limit_req zone=kidora_ai burst=10 nodelay;
+        proxy_pass http://kidora_ai/api/ai/;
+        include /etc/nginx/snippets/kidora-proxy.conf;
+    }
+
+    # --- MinIO / object storage ---------------------------------------------
+    # MinIO validates the Host header against its bucket config, so the
+    # upstream Host is overridden with the access key.
+    location /uploads/ {
+        proxy_pass http://kidora_minio/{{ minio_bucket }}/;
+        include /etc/nginx/snippets/kidora-proxy.conf;
+        proxy_set_header Host {{ minio_root_user }};
+    }
+
+    location /kidora/ {
+        proxy_pass http://kidora_minio/{{ minio_bucket }}/;
+        include /etc/nginx/snippets/kidora-proxy.conf;
+        proxy_set_header Host {{ minio_root_user }};
+    }
+
+{% if grafana_vhost.enabled | bool %}
+    # --- Grafana ------------------------------------------------------------
+    # Grafana builds absolute URLs from root_url, so it must be told the real
+    # public prefix (grafana_root_url in
+    # inventories/staging/group_vars/monitoring.yml).
+    location {{ grafana_vhost.location }} {
+        limit_req zone=kidora_api burst=20 nodelay;
+        proxy_pass http://kidora_grafana/;
+        include /etc/nginx/snippets/kidora-proxy.conf;
+    }
+{% endif %}
+
+{% if prometheus_vhost.enabled | bool %}
+    # --- Prometheus ---------------------------------------------------------
+    # Read-only expression browser, and the Grafana datasource fallback. A
+    # PromQL endpoint accepts arbitrarily expensive queries, so it is
+    # restricted to the tailnet and the monitoring host itself.
+    location /prometheus/ {
+        allow {{ tailscale_cidr }};
+        allow {{ kidora_monitoring_ip }};
+        allow 127.0.0.1;
+        deny all;
+
+        proxy_pass http://kidora_prometheus/;
+        include /etc/nginx/snippets/kidora-proxy.conf;
+    }
+{% endif %}
+
+    # --- Static fallbacks ----------------------------------------------------
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+}

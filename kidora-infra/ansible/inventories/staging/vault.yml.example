@@ -1,0 +1,59 @@
+---
+# =============================================================================
+#  Kidora — Staging :: secrets
+# =============================================================================
+#  ENCRYPTED. Create or edit with:
+#      ansible-vault edit inventories/staging/group_vars/vault.yml
+#
+#  Every variable the stack needs. Replace the placeholders — a placeholder that
+#  is left in place is worse than a missing one, because it deploys happily and
+#  then fails at runtime.
+#
+#  Generate real values:
+#      openssl rand -base64 36      # APP_SECRET_KEY
+#      openssl rand -base64 24      # database / MinIO passwords
+#      openssl rand -base64 18      # Grafana admin
+#
+#  NONE of these values appear in any other file in this repository. The
+#  plaintext credentials that used to sit in ansible/group_vars/all.yml and
+#  ansible/templates/compose.env.j2 should be considered compromised and rotated.
+# =============================================================================
+
+# --- GitHub Container Registry ------------------------------------------------
+# The four Kidora images on ghcr.io are PRIVATE.
+# Classic PAT with the `read:packages` scope, or a fine-grained PAT with read
+# access to Packages. Without it every `docker compose pull` fails with 401.
+vault_github_pat: "ghp_REPLACE_ME"
+
+# --- MongoDB -----------------------------------------------------------------
+# Root password, used by MONGO_INITDB_ROOT_PASSWORD. Only applied on the FIRST
+# start of an empty data volume — changing it later does nothing, so rotate it
+# with mongosh rather than by re-running Ansible.
+vault_mongodb_root_password: "REPLACE_ME"
+
+# The least-privilege application user created by
+# roles/app_stack/templates/init-app-user.js.j2. readWrite on one database.
+vault_mongodb_app_password: "REPLACE_ME"
+
+# --- MinIO -------------------------------------------------------------------
+vault_minio_root_password: "REPLACE_ME"
+
+# --- Backend -----------------------------------------------------------------
+# Signs JWTs. Changing it logs every user out.
+vault_app_secret_key: "REPLACE_ME"
+
+# --- Grafana -----------------------------------------------------------------
+vault_grafana_admin_password: "REPLACE_ME"
+
+# --- Tailscale ----------------------------------------------------------------
+# From the Tailscale admin console -> Settings -> Keys.
+# Remove tailscale_enabled from group_vars/all.yml if you would rather not use
+# a tailnet; the backoffice vhost then needs a different allow rule.
+vault_tailscale_auth_key: "tskey-auth-REPLACE_ME"
+
+# --- AI provider keys (optional) ---------------------------------------------
+# The AI service starts without these, but the features that need them fail at
+# call time. Leave blank rather than inventing a placeholder.
+vault_groq_api_key: ""
+vault_bfl_api_key: ""
+vault_pollinations_api_key: ""

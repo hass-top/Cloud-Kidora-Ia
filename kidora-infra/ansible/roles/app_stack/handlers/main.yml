@@ -1,0 +1,19 @@
+---
+# =============================================================================
+#  app_stack handlers
+# =============================================================================
+#  A changed Compose file means the project definition moved, so recreate only
+#  the services that actually changed. `docker compose up -d` is idempotent and
+#  leaves untouched containers alone, which avoids the downtime a blanket
+#  `recreate: always` would cause on every run.
+# =============================================================================
+
+- name: Recreate the application stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ deploy_root }}"
+    files: docker-compose.yml
+    state: present
+    pull: missing
+    remove_orphans: true
+  become: true
+  become_user: "{{ deploy_user }}"

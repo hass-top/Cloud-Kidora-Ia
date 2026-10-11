@@ -1,0 +1,5 @@
+---
+# Defaults for the base_server role.
+
+swap_file: /swapfile
+swap_size: 2G

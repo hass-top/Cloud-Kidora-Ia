@@ -1,0 +1,79 @@
+# {{ ansible_managed }}
+# =============================================================================
+#  Backoffice vhost — backoffice.kidora.freeddns.org   (INTERNAL ONLY)
+# =============================================================================
+#  The backoffice is an administrative tool. It must never be reachable from
+#  the public Internet, so this vhost:
+#
+#    1. has no public DNS record,
+#    2. rejects every source address outside the tailnet, and
+#    3. logs the rejection, so a misconfiguration is visible rather than silent.
+#
+#  Reach it by joining the tailnet, or over SSH:
+#      ssh -L 8080:127.0.0.1:8080 root@kidora-edge
+# =============================================================================
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {{ backoffice_vhost.server_name }};
+
+    location ^~ /.well-known/acme-challenge/ {
+        root {{ certbot_webroot_path }};
+        default_type "text/plain";
+        allow all;
+    }
+
+    # Anything that is not on the tailnet is refused here. `allow`/`deny` run in
+    # order and the first match wins, so `deny all` is the fallback.
+    location / {
+        allow {{ backoffice_vhost.allow_cidr }};
+        allow 127.0.0.1;
+        deny all;
+
+        proxy_pass http://kidora_backoffice;
+        include /etc/nginx/snippets/kidora-proxy.conf;
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name {{ backoffice_vhost.server_name }};
+
+    ssl_certificate     {{ ssl_certificate_path }};
+    ssl_certificate_key {{ ssl_certificate_key_path }};
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Robots-Tag "noindex, nofollow" always;
+    # The backoffice is an admin surface: never let it be framed or MIME-sniffed.
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+
+    location / {
+        allow {{ backoffice_vhost.allow_cidr }};
+        allow 127.0.0.1;
+        # 403 rather than a silent drop, so a team member outside the tailnet
+        # can tell "wrong network" from "the site is down".
+        deny all;
+
+        proxy_pass http://kidora_backoffice;
+        include /etc/nginx/snippets/kidora-proxy.conf;
+    }
+
+    location /ws/ {
+        allow {{ backoffice_vhost.allow_cidr }};
+        allow 127.0.0.1;
+        deny all;
+
+        proxy_pass http://kidora_backoffice;
+        include /etc/nginx/snippets/kidora-proxy.conf;
+        proxy_set_header Upgrade    $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_cache_bypass $http_upgrade;
+    }
+}

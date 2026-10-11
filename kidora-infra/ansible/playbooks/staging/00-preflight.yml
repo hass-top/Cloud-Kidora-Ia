@@ -1,0 +1,49 @@
+---
+# =============================================================================
+# 00 — Preflight: every server, before anything is deployed
+# =============================================================================
+#
+# Run with:
+#   ansible-playbook -i inventories/staging/hosts.ini playbooks/staging/00-preflight.yml
+#
+# =============================================================================
+
+- name: Preflight — packages, tuning and hardening on every server
+  hosts: kidora
+  become: true
+  gather_facts: true
+
+  # Ordering is deliberate:
+  # 1. common
+  # 2. base_server
+  # 3. fail2ban_hardening
+  # 4. network_firewall
+  #
+  # The firewall is LAST because it enables UFW.
+
+  roles:
+    - role: common
+      tags:
+        - base
+        - common
+        - preflight
+
+    - role: base_server
+      tags:
+        - base
+        - tuning
+        - preflight
+
+    - role: fail2ban_hardening
+      when: fail2ban_enabled | default(false) | bool
+      tags:
+        - base
+        - security
+        - preflight
+
+    - role: network_firewall
+      tags:
+        - base
+        - security
+        - firewall
+        - preflight

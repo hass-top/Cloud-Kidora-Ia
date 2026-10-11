@@ -1,0 +1,81 @@
+---
+# =============================================================================
+#  srv3 — EDGE : Nginx, Certbot, Tailscale
+# =============================================================================
+#  The only server with a public presence. Installed by roles/edge_nginx and
+#  the existing roles/certbot role.
+# =============================================================================
+
+# --- TLS ----------------------------------------------------------------------
+certbot_email: "admin@{{ domain_name }}"
+certbot_domains:
+  - "{{ domain_name }}"
+  - "www.{{ domain_name }}"
+# Webroot mode: nginx keeps serving 80 while certbot renews, so renewal never
+# drops traffic. Standalone mode would require stopping nginx on every renewal.
+certbot_install_nginx_plugin: false
+certbot_webroot_path: /var/www/certbot
+certbot_renewal_frequency: "twice-daily"
+# Staging: Let's Encrypt rate-limits you to 5 duplicate certs/week. Leave this
+# true until the vhosts are final, then set it to false and re-run 40-edge.yml.
+certbot_use_staging: true
+
+# --- Vhosts -------------------------------------------------------------------
+# The public site. Every upstream points at the app server by IP, because the
+# upstreams are on a different host and Docker DNS (backend:8086) does not
+# resolve across machines.
+public_vhost:
+  server_name: "{{ domain_name }}"
+  frontend_upstream: "http://{{ kidora_app_ip }}:80"
+  backend_upstream: "http://{{ kidora_app_ip }}:8086"
+  ai_upstream: "http://{{ kidora_app_ip }}:8000"
+  minio_upstream: "http://{{ kidora_app_ip }}:9000"
+
+# Grafana, published under /grafana on the main domain. Grafana's own
+# root_url is set to match, so its generated links and cookies line up.
+grafana_vhost:
+  enabled: true
+  location: /grafana
+  upstream: "http://{{ kidora_monitoring_ip }}:3000"
+
+# Prometheus, restricted below to the tailnet + monitoring host itself.
+prometheus_vhost:
+  enabled: true
+  upstream: "http://{{ kidora_monitoring_ip }}:9090"
+
+# The backoffice is INTERNAL ONLY — reachable over Tailscale, never publicly.
+# Its upstream is port 80 on the app server (the SvelteKit image serves the
+# static build with nginx on 80; see docker-compose/README.md).
+backoffice_vhost:
+  enabled: true
+  server_name: "backoffice.{{ domain_name }}"
+  upstream: "http://{{ kidora_app_ip }}:80"
+  # Only the tailnet may reach this vhost.
+  allow_cidr: "{{ tailscale_cidr }}"
+
+# --- nginx tuning -------------------------------------------------------------
+nginx_worker_connections: 2048
+nginx_client_max_body_size: "64m"
+# Long timeouts: the AI endpoint can hold a request open while it streams a
+# generated report, and /ws/ must not be reaped mid-session.
+nginx_proxy_read_timeout: "900s"
+nginx_proxy_send_timeout: "900s"
+nginx_proxy_connect_timeout: "30s"
+nginx_real_ip_header: X-Forwarded-For
+
+# --- fail2ban -----------------------------------------------------------------
+# edge.yml enables the nginx jails in addition to sshd.
+fail2ban_nginx_enabled: true
+fail2ban_nginx_bantime: 1h
+fail2ban_nginx_maxretry: 10
+
+# --- UFW ruleset --------------------------------------------------------------
+# The only server open to the world, and only on the two web ports. Everything
+# the edge needs to reach (app + monitoring) is permitted inbound, so a new
+# vhost never requires another firewall change.
+firewall_rules:
+  - { port: 22, proto: tcp, source: any, comment: "SSH - administration" }
+  - { port: 80, proto: tcp, source: any, comment: "HTTP - ACME + redirect to HTTPS" }
+  - { port: 443, proto: tcp, source: any, comment: "HTTPS" }
+
+firewall_ranges: []

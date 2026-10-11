@@ -11,6 +11,12 @@
 # Ansible temporary files
 *.retry
 
+# Vault: only the .example template is committed, never a decrypted file
+inventory/**/group_vars/vault.yml.dec
+*.dec
+vault-password
+.vault_pass
+
 # OS files
 .DS_Store
 .terraform/

@@ -1,0 +1,49 @@
+﻿---
+# =============================================================================
+#  Kidora — Staging :: full 3-server deployment
+# =============================================================================
+#    srv1  kidora_monitoring  Prometheus, Grafana, Alertmanager, exporters
+#    srv2  kidora_app         MongoDB, MinIO, backend, AI, frontend, backoffice
+#    srv3  kidora_edge        nginx + Let's Encrypt + Tailscale
+#
+#  The order is the whole point of splitting this into numbered playbooks:
+#
+#    00  hardening and firewall   — every host must still accept SSH afterwards
+#    10  Docker + deploy user    — everything below shells out to `docker`
+#    15  Tailscale               — the backoffice vhost depends on the tailnet
+#    20  monitoring              — scrapes the exporters that 30 installs
+#    30  application             — MongoDB, MinIO, the four product images
+#    40  edge                    — nginx, certificate, then the TLS vhosts
+#
+#  Run it:
+#      cd kidora-infra/ansible
+#      ansible-playbook -i inventories/staging/hosts.ini playbooks/staging/main.yml
+#
+#  The first run needs the vault password. Later runs do not, provided the
+#  registry credentials are already cached on the hosts.
+#
+#  NB: this file previously chained the k3s/Helm playbooks (../terraform.yml,
+#  ../docompose.yml, ../minio_db_zot.yml, ../k3s.yml, ...). Two of those did
+#  not exist, so the staging entry point could not run at all. Those playbooks
+#  are untouched and still reachable individually for the k3s path.
+# =============================================================================
+
+- import_playbook: 00-preflight.yml
+  tags: [always]
+
+- import_playbook: 10-docker.yml
+  tags: [docker]
+
+- import_playbook: 15-tailscale.yml
+  tags: [tailscale]
+
+- import_playbook: 20-monitoring.yml
+  tags: [monitoring]
+
+- import_playbook: 30-app.yml
+  tags: [app]
+
+- import_playbook: 40-edge.yml
+  tags: [edge]
+
+

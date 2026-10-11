@@ -1,0 +1,60 @@
+---
+# =============================================================================
+#  srv1 — MONITORING : Prometheus, Grafana, Alertmanager, exporters
+# =============================================================================
+#  Installed by roles/prometheus_stack. Nothing here is secret; the Grafana
+#  admin password comes from the vault (vault_grafana_admin_password).
+# =============================================================================
+
+# --- Prometheus ---------------------------------------------------------------
+prometheus_retention: 30d
+prometheus_retention_size: 20GB
+prometheus_scrape_interval: 30s
+prometheus_scrape_timeout: 15s
+# Extra time-series headroom in the local-path volume.
+prometheus_storage_size: 20Gi
+
+# --- Alertmanager -------------------------------------------------------------
+alertmanager_retention: 120h
+# Where Alertmanager posts. Leave empty to disable notifications entirely.
+alertmanager_webhook_url: ""
+alertmanager_slack_channel: ""
+
+# --- Grafana ------------------------------------------------------------------
+grafana_port: 3000
+grafana_root_url: "https://{{ domain_name }}/grafana/"
+# Provisioned as a read-only Prometheus datasource on every redeploy.
+grafana_datasource_name: Prometheus
+
+# --- Remote bind addresses ----------------------------------------------------
+# The three exporters below are scraped by the Prometheus that runs on THIS
+# host, so they must listen on a routable address on their own server.
+# UFW only permits the monitoring IP to reach them (see inventories/.../app.yml
+# and edge.yml) — binding 0.0.0.0 is therefore safe here.
+node_exporter_port: 9100
+cadvisor_port: 9101
+mongo_exporter_port: 9216
+
+# --- Self-monitoring host -----------------------------------------------------
+prometheus_bind_address: "0.0.0.0"
+prometheus_port: 9090
+alertmanager_port: 9093
+grafana_bind_address: "0.0.0.0"
+
+# --- UFW ruleset --------------------------------------------------------------
+# Grafana is the only UI a human uses here, so it is reachable from the edge
+# (the public /grafana vhost) and from the app server, and from nowhere else.
+# Prometheus/Alertmanager are read by the edge proxy; direct access is limited
+# to the edge host too.
+firewall_rules:
+  - { port: 22, proto: tcp, source: any, comment: "SSH - administration" }
+  - { port: 3000, proto: tcp, source: "{{ kidora_edge_ip }}", comment: "Grafana via edge nginx" }
+  - { port: 3000, proto: tcp, source: "{{ kidora_app_ip }}", comment: "Grafana from app" }
+  - { port: 9090, proto: tcp, source: "{{ kidora_edge_ip }}", comment: "Prometheus via edge nginx" }
+  - { port: 9090, proto: tcp, source: "{{ kidora_monitoring_ip }}", comment: "Prometheus self-scrape" }
+  - { port: 9093, proto: tcp, source: "{{ kidora_edge_ip }}", comment: "Alertmanager via edge nginx" }
+  - { port: 9093, proto: tcp, source: "{{ kidora_monitoring_ip }}", comment: "Alertmanager self" }
+
+# This host's own node-exporter and cAdvisor bind to 127.0.0.1 and are scraped
+# over loopback, so they need no inbound rule at all.
+firewall_ranges: []

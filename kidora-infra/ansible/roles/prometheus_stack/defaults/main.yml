@@ -1,0 +1,8 @@
+---
+# Defaults for the prometheus_stack role.
+# The real values come from inventories/staging/group_vars/monitoring.yml.
+
+grafana_admin_user: admin
+
+# How long to wait for Prometheus/Grafana to report healthy before failing.
+prometheus_stack_wait_timeout: 300

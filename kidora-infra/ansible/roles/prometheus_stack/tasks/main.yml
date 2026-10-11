@@ -1,0 +1,148 @@
+---
+# =============================================================================
+#  prometheus_stack — Prometheus + Alertmanager + Grafana + self-exporters
+# =============================================================================
+#  Runs on the kidora_monitoring host only (see playbooks/staging/20-monitoring.yml).
+# =============================================================================
+
+# --- Filesystem layout --------------------------------------------------------
+#  Prometheus, Alertmanager and Grafana each keep state. Those directories are
+#  bind-mounted through Compose `driver_opts` (see the template), so the data
+#  lands at a predictable path a backup job can reach, instead of inside
+#  /var/lib/docker/volumes where it is awkward to find.
+- name: Ensure the monitoring directory tree exists
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ deploy_root }}", mode: "0755" }
+    - { path: "{{ deploy_root }}/prometheus", mode: "0755" }
+    - { path: "{{ deploy_root }}/prometheus/rules", mode: "0755" }
+    - { path: "{{ deploy_root }}/alertmanager", mode: "0755" }
+    - { path: "{{ deploy_root }}/grafana/provisioning/datasources", mode: "0755" }
+    - { path: "{{ deploy_root }}/secrets", mode: "0700" }
+    - { path: "{{ deploy_root }}/data/prometheus", mode: "0775" }
+    - { path: "{{ deploy_root }}/data/alertmanager", mode: "0775" }
+    - { path: "{{ deploy_root }}/data/grafana", mode: "0775" }
+  loop_control:
+    label: "{{ item.path }}"
+
+# --- Grafana admin credentials ------------------------------------------------
+# Written to 0600 files and mounted as Compose secrets. Grafana reads
+# GF_SECURITY_ADMIN_PASSWORD__FILE, so the password never appears in the
+# container's environment and never shows up in `docker inspect`.
+- name: Write the Grafana admin user
+  ansible.builtin.copy:
+    content: "{{ grafana_admin_user }}\n"
+    dest: "{{ deploy_root }}/secrets/grafana_admin_user"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: "0600"
+  no_log: true
+
+- name: Write the Grafana admin password
+  ansible.builtin.copy:
+    content: "{{ vault_grafana_admin_password }}\n"
+    dest: "{{ deploy_root }}/secrets/grafana_admin_password"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: "0600"
+  no_log: true
+
+# --- Configuration ------------------------------------------------------------
+- name: Deploy the Prometheus scrape configuration
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: "{{ deploy_root }}/prometheus/prometheus.yml"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: "0644"
+  notify: reload prometheus
+
+- name: Deploy the Alertmanager configuration
+  ansible.builtin.template:
+    src: alertmanager.yml.j2
+    dest: "{{ deploy_root }}/alertmanager/alertmanager.yml"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: "0644"
+  notify: reload alertmanager
+
+- name: Deploy the recording and alerting rules
+  ansible.builtin.template:
+    src: rules.yml.j2
+    dest: "{{ deploy_root }}/prometheus/rules/kidora.yml"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: "0644"
+  notify: reload prometheus
+
+- name: Deploy the Grafana datasource provisioning
+  ansible.builtin.template:
+    src: grafana-datasource.yml.j2
+    dest: "{{ deploy_root }}/grafana/provisioning/datasources/prometheus.yml"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: "0644"
+  notify: restart grafana
+
+# --- The stack itself ---------------------------------------------------------
+- name: Deploy the monitoring Compose file
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ deploy_root }}/docker-compose.yml"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: "0640"
+  register: monitoring_compose
+
+# `pull: missing` keeps a redeploy from re-downloading unchanged images while
+# still picking up a changed tag. `pull: always` would re-pull on every run.
+- name: Ensure the monitoring stack is up
+  community.docker.docker_compose_v2:
+    project_src: "{{ deploy_root }}"
+    files: docker-compose.yml
+    state: present
+    pull: missing
+    wait: true
+    wait_timeout: 300
+  become: true
+  become_user: "{{ deploy_user }}"
+
+# --- Post-deploy assertions ---------------------------------------------------
+# A container that started is not a container that works. These wait for the
+# API to answer, so a failed deployment fails here rather than silently.
+- name: Wait for the Prometheus API to answer
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ prometheus_port }}/-/ready"
+    status_code: 200
+  register: prometheus_ready
+  until: prometheus_ready is succeeded
+  retries: 30
+  delay: 10
+
+- name: Wait for the Grafana API to answer
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ grafana_port }}/api/health"
+    status_code: 200
+  register: grafana_ready
+  until: grafana_ready is succeeded
+  retries: 30
+  delay: 10
+
+- name: Report the monitoring endpoints
+  ansible.builtin.debug:
+    msg:
+      - "=============================================="
+      - "Monitoring stack is up on {{ inventory_hostname }}"
+      - "=============================================="
+      - "Grafana     : http://{{ kidora_monitoring_ip }}:{{ grafana_port }}/ (via edge: {{ grafana_root_url }})"
+      - "Prometheus  : http://{{ kidora_monitoring_ip }}:{{ prometheus_port }}"
+      - "Alertmanager: http://{{ kidora_monitoring_ip }}:{{ alertmanager_port }}"
+      - "Admin user  : {{ grafana_admin_user }}"
+      - "Admin pass  : see {{ deploy_root }}/secrets/grafana_admin_password"
+      - "Scraping    : node x3, cAdvisor x3, mongodb, grafana, alertmanager"
+      - "=============================================="

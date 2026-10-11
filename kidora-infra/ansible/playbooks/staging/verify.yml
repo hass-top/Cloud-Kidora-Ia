@@ -1,0 +1,244 @@
+---
+# =============================================================================
+#  Verify — is the 3-server stack actually healthy?
+# =============================================================================
+#  A deployment that completes is not the same as a deployment that works.
+#  This asserts the whole path: the edge reaches the app, Prometheus reaches
+#  the exporters, and nothing that should be private answers on a public
+#  interface.
+#
+#      ansible-playbook -i inventories/staging/hosts.ini playbooks/staging/verify.yml
+# =============================================================================
+
+- name: Verify — every server answers as expected
+  hosts: kidora
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Confirm the role marker was set in the inventory
+      ansible.builtin.assert:
+        that:
+          - kidora_role is defined
+        fail_msg: >-
+          {{ inventory_hostname }} has no kidora_role. Check that it appears in
+          one of the [kidora_*] groups in inventories/staging/hosts.ini.
+        quiet: true
+
+    - name: Check that the Docker daemon is running
+      ansible.builtin.command: docker info --format '{{ '{{ .ServerVersion }}' }}'
+      register: docker_version
+      changed_when: false
+      failed_when: false
+
+    - name: Read the UFW status
+      ansible.builtin.command: ufw status verbose
+      register: ufw_status
+      changed_when: false
+      failed_when: false
+
+    - name: Assert that UFW is active and default-denying
+      ansible.builtin.assert:
+        that:
+          - "'Status: active' in ufw_status.stdout"
+          - "'Default: deny (incoming)' in ufw_status.stdout"
+        fail_msg: >-
+          UFW is not enforcing a default-deny inbound policy on
+          {{ inventory_hostname }}:
+          {{ ufw_status.stdout }}
+        quiet: true
+
+    - name: Assert that the tailnet can reach MinIO on the app server
+      # Regression guard: the interface-wide tailnet rule in
+      # roles/network_firewall was gated on a BLOCK-device fact
+      # (ansible_facts['devices']), so it never applied and MinIO was
+      # unreachable over the tailnet.
+      ansible.builtin.assert:
+        that:
+          - "'9000/tcp' in ufw_status.stdout"
+          - "'9001/tcp' in ufw_status.stdout"
+          - "'100.64.0.0/10' in ufw_status.stdout"
+        fail_msg: >-
+          {{ inventory_hostname }} has no tailnet rule for MinIO (9000/9001 from
+          100.64.0.0/10). Check firewall_rules in
+          inventories/staging/group_vars/app.yml and the Tailscale block in
+          roles/network_firewall/tasks/main.yml.
+        quiet: true
+      when: "'kidora_app' in group_names"
+
+    - name: Report the host state
+      ansible.builtin.debug:
+        msg:
+          - "{{ inventory_hostname }} [{{ kidora_role }}]"
+          - "  Docker : {{ docker_version.stdout if docker_version.rc == 0 else 'NOT RUNNING' }}"
+          - "  UFW    : active, default deny incoming"
+          - "  Tailnet: {{ 'MinIO 9000/9001 allowed for 100.64.0.0/10'
+              if 'kidora_app' in group_names else 'interface rule only (tailscale0)' }}"
+
+- name: Verify — the application server is serving
+  hosts: kidora_app
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Check every application service
+      ansible.builtin.uri:
+        url: "{{ item.url }}"
+        # 401/403 on the backend means it is up and refusing an anonymous
+        # probe, which is the expected answer if the endpoint is secured.
+        status_code: "{{ item.status }}"
+        timeout: 15
+      loop:
+        - { url: "http://127.0.0.1:{{ frontend_port }}/", status: 200 }
+        - { url: "http://127.0.0.1:{{ backend_port }}/actuator/health", status: [200, 401, 403] }
+        - { url: "http://127.0.0.1:{{ backoffice_port }}/", status: 200 }
+        - { url: "http://127.0.0.1:{{ ai_port }}/health", status: 200 }
+        - { url: "http://127.0.0.1:{{ minio_port }}/minio/health/live", status: 200 }
+      loop_control:
+        label: "{{ item.url }}"
+      register: v_app
+
+    - name: Report the application services
+      ansible.builtin.debug:
+        msg: >-
+          {{ item.item.url }} -> {{ item.status if item.status is defined else 'FAILED' }}
+      loop: "{{ v_app.results }}"
+      loop_control:
+        label: "{{ item.item.url | default('?') }}"
+
+- name: Verify — the monitoring server is scraping all three hosts
+  hosts: kidora_monitoring
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Query the Prometheus API for the up/down signal
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ prometheus_port }}/api/v1/query?query=up"
+        return_content: true
+      register: v_prom
+
+    - name: Query Prometheus for targets that are down
+      # `up == 0` is the authoritative signal: the target exists but is not
+      # answering. A target that was never configured does not appear here, so
+      # the total count is checked alongside it.
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ prometheus_port }}/api/v1/query?query=up%20%3D%3D%200"
+        return_content: true
+      register: v_down
+
+    - name: Check the Grafana API
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ grafana_port }}/api/health"
+        status_code: 200
+      register: v_grafana
+
+    - name: Report the monitoring state
+      ansible.builtin.debug:
+        msg:
+          - "prometheus : {{ v_prom.json.data.result | length }} target(s) known"
+          - "grafana    : {{ v_grafana.status }} (database: {{ v_grafana.json.database }})"
+          - "down       : {{ v_down.json.data.result | length }} target(s) reporting up=0"
+          - ""
+          - "If targets are down, check FROM THIS HOST that it can reach the"
+          - "exporters on the other two:"
+          - "  curl -s http://{{ kidora_app_ip }}:{{ node_exporter_port }}/metrics | head"
+          - "  curl -s http://{{ kidora_edge_ip }}:{{ node_exporter_port }}/metrics | head"
+
+    - name: Assert that no scrape target is down
+      ansible.builtin.fail:
+        msg: >-
+          {{ v_down.json.data.result | length }} Prometheus target(s) are down.
+          This normally means UFW is blocking the monitoring host from the
+          exporters on {{ kidora_app_ip }} and {{ kidora_edge_ip }}.
+      when: (v_down.json.data.result | length) > 0
+
+- name: Verify — the edge is proxying everything
+  hosts: kidora_edge
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Check that a certificate exists
+      ansible.builtin.stat:
+        path: "{{ ssl_certificate_path }}"
+      register: v_cert
+
+    - name: Check the public site over TLS
+      ansible.builtin.uri:
+        url: "https://{{ domain_name }}/"
+        status_code: 200
+        validate_certs: true
+      register: v_public
+      when: v_cert.stat.exists
+
+    - name: Check the ACME challenge path is still served over plain HTTP
+      # If this stops answering, the next renewal fails — the kind of problem
+      # that stays invisible until it becomes an expired certificate.
+      ansible.builtin.uri:
+        url: "http://{{ domain_name }}/.well-known/acme-challenge/probe"
+        status_code: [200, 403, 404]
+      register: v_acme
+
+    - name: Report the edge state
+      ansible.builtin.debug:
+        msg:
+          - "certificate : {{ 'present' if v_cert.stat.exists else 'MISSING' }} ({{ ssl_certificate_path }})"
+          - "public site : {{ v_public.status | default('n/a - no certificate yet') }}"
+          - "acme path   : {{ v_acme.status }} (must not be 301/302, or renewal will fail)"
+
+- name: Verify — cross-server reachability and containment
+  hosts: kidora_edge
+  become: true
+  gather_facts: false
+
+  # The app port variables live in group_vars/app.yml, which is not loaded for
+  # the edge host, so the two needed here are restated as play vars rather than
+  # guessed at.
+  vars:
+    mongodb_port: 27017
+    backend_port: 8086
+
+  tasks:
+    - name: Confirm the edge can reach every upstream it proxies to
+      # Run from the edge, not from the control machine: this is the only place
+      # from which the test means anything, since the edge is what proxies.
+      ansible.builtin.uri:
+        url: "{{ item.url }}"
+        status_code: "{{ item.status }}"
+        timeout: 10
+      loop:
+        - { url: "http://{{ kidora_app_ip }}:{{ backend_port }}/actuator/health", status: [200, 401, 403] }
+        - { url: "http://{{ kidora_app_ip }}:80/", status: 200 }
+        - { url: "http://{{ kidora_app_ip }}:8000/health", status: 200 }
+        - { url: "http://{{ kidora_monitoring_ip }}:3000/api/health", status: 200 }
+        - { url: "http://{{ kidora_monitoring_ip }}:9090/-/ready", status: 200 }
+      loop_control:
+        label: "{{ item.url }}"
+      register: v_upstreams
+
+    - name: Report upstream reachability
+      ansible.builtin.debug:
+        msg: >-
+          {{ item.item.url }} -> {{ item.status if item.status is defined else 'UNREACHABLE' }}
+      loop: "{{ v_upstreams.results }}"
+      loop_control:
+        label: "{{ item.item.url | default('?') }}"
+
+    - name: Probe MongoDB from the edge
+      # MongoDB binds 127.0.0.1 on the app host. This asserts the containment
+      # actually holds, rather than trusting that the compose file is right.
+      ansible.builtin.uri:
+        url: "http://{{ kidora_app_ip }}:{{ mongodb_port }}/"
+        timeout: 5
+      register: v_mongo_leak
+      failed_when: false
+      changed_when: false
+
+    - name: Fail if MongoDB answers from another host
+      ansible.builtin.fail:
+        msg: >-
+          MongoDB answered on {{ kidora_app_ip }}:{{ mongodb_port }} from the edge
+          server. It must be bound to 127.0.0.1 — check the `ports:` entry for
+          the mongodb service in roles/app_stack/templates/compose.yml.j2.
+      when: v_mongo_leak.status is defined and v_mongo_leak.status != 0

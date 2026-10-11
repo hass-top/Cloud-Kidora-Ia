@@ -1,0 +1,120 @@
+# {{ ansible_managed }}
+# =============================================================================
+#  Kidora edge nginx — managed by Ansible, DO NOT EDIT BY HAND
+# =============================================================================
+#  Installed by roles/edge_nginx on the kidora_edge host.
+#
+#  This is the only public web server in the topology. It terminates TLS and
+#  proxies to the application server and the monitoring server, both of which
+#  publish nothing to the Internet.
+# =============================================================================
+
+user  www-data;
+worker_processes  auto;
+
+# 1024 is the usual ceiling and matters here: every proxied request costs one
+# client socket plus one upstream socket, so the default 512 is exhausted by a
+# few hundred concurrent users.
+worker_rlimit_nofile 65535;
+
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+    worker_connections {{ nginx_worker_connections }};
+    multi_accept on;
+}
+
+http {
+    # --- Logging -------------------------------------------------------------
+    # Two access logs, split by vhost name, so the backoffice trail stays
+    # distinguishable from the public one in the same file set.
+    log_format main '$remote_addr - $remote_user [$time_local] '
+                    '"$request" $status $body_bytes_sent '
+                    '"$http_referer" "$http_user_agent" '
+                    'rt=$request_time uct="$upstream_connect_time" '
+                    'urt="$upstream_response_time" vhost=$host';
+
+    access_log /var/log/nginx/access.log main;
+    error_log  /var/log/nginx/error.log warn;
+
+    # --- Transport -----------------------------------------------------------
+    sendfile      on;
+    tcp_nopush    on;
+    tcp_nodelay   on;
+    # With keepalive off, nginx closes the upstream connection after each
+    # request. Every proxied request would otherwise pay a fresh TCP handshake
+    # to a server three time zones away.
+    keepalive_timeout  65;
+    keepalive_requests 1000;
+    types_hash_max_size 4096;
+    server_tokens off;
+
+    # --- Paths ---------------------------------------------------------------
+    include             /etc/nginx/mime.types;
+    default_type        application/octet-stream;
+    # Keep these in sync with client_max_body_size in the vhosts; nginx silently
+    # returns 413 when the smaller of the two wins.
+    client_max_body_size {{ nginx_client_max_body_size }};
+    client_body_timeout  60s;
+    client_header_timeout 60s;
+    send_timeout        {{ nginx_proxy_read_timeout }};
+    large_client_header_buffers 4 16k;
+
+    # --- Gzip ----------------------------------------------------------------
+    gzip              on;
+    gzip_vary         on;
+    gzip_proxied      any;
+    gzip_comp_level   5;
+    gzip_min_length   512;
+    gzip_types
+        text/plain text/css text/xml text/javascript
+        application/javascript application/x-javascript
+        application/json application/xml application/xml+rss
+        image/svg+xml font/woff font/woff2;
+
+    # --- Rate limiting -------------------------------------------------------
+    # Backed by the zones declared here. The vhosts apply them; without these
+    # declarations an `limit_req` directive fails to start nginx entirely.
+    limit_req_zone  $binary_remote_addr zone=kidora_api:10m   rate=30r/s;
+    limit_req_zone  $binary_remote_addr zone=kidora_login:10m rate=5r/m;
+    limit_req_zone  $binary_remote_addr zone=kidora_ai:10m    rate=2r/s;
+    limit_conn_zone $binary_remote_addr zone=kidora_conn:10m;
+
+    # WebSocket support. Without this map, $connection_upgrade is an unknown
+    # variable and nginx refuses to start with "unknown "connection_upgrade"
+    # variable" — it is a hard failure, not a warning. `close` for requests
+    # with no Upgrade header keeps ordinary keep-alive connections alive
+    # instead of marking them "upgrade".
+    map $http_upgrade $connection_upgrade {
+        default upgrade;
+        ''      close;
+    }
+
+    # --- Real client IPs -----------------------------------------------------
+    # The edge is directly internet-facing, so $remote_addr is already the real
+    # client. This is here for the case where a CDN or load balancer is put in
+    # front later: without it, every visitor would share one rate-limit bucket.
+    set_real_ip_from 10.0.0.0/8;
+    set_real_ip_from 172.16.0.0/12;
+    set_real_ip_from 192.168.0.0/16;
+    real_ip_header {{ nginx_real_ip_header }};
+    real_ip_recursive on;
+
+    # --- Upstreams -----------------------------------------------------------
+    # The application services live on a DIFFERENT host, so they are addressed
+    # by IP. Docker service names such as `backend` do not resolve off the
+    # host's own network — that is the reason roles/nginx could not be reused
+    # as-is for the split topology.
+    upstream kidora_frontend   { server {{ kidora_app_ip }}:80;    keepalive 32; }
+    upstream kidora_backend    { server {{ kidora_app_ip }}:8086; keepalive 32; }
+    upstream kidora_ai         { server {{ kidora_app_ip }}:8000; keepalive 16; }
+    upstream kidora_backoffice { server {{ kidora_app_ip }}:8080; keepalive 16; }
+    upstream kidora_minio      { server {{ kidora_app_ip }}:9000; keepalive 16; }
+    upstream kidora_grafana    { server {{ kidora_monitoring_ip }}:3000; keepalive 8; }
+    upstream kidora_prometheus { server {{ kidora_monitoring_ip }}:9090; keepalive 8; }
+
+    # --- Includes ------------------------------------------------------------
+    include /etc/nginx/conf.d/*.conf;
+    include /etc/nginx/sites-enabled/*;
+}

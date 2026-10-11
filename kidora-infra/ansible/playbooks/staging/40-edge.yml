@@ -1,0 +1,76 @@
+---
+# =============================================================================
+#  40 — Edge: srv3 (nginx + Let's Encrypt)
+# =============================================================================
+#  The only public server. Three plays, in this order:
+#
+#    1. nginx   — installs the HTTP bootstrap vhost, because there is no
+#                 certificate yet and `nginx -t` fails on a vhost whose
+#                 ssl_certificate points at a file that does not exist.
+#    2. certbot — obtains the certificate through the ACME challenge the
+#                 bootstrap vhost is already serving.
+#    3. nginx   — re-runs, finds the certificate on disk, and swaps in the real
+#                 TLS vhosts.
+#
+#  The third play is what makes this work unattended: nothing has to be toggled
+#  by hand between the first and second deploy.
+# =============================================================================
+
+- name: Edge — install nginx and serve the ACME challenge
+  hosts: kidora_edge
+  become: true
+  gather_facts: true
+  tags: [edge, nginx]
+
+  roles:
+    - role: edge_nginx
+      tags: [edge, nginx]
+
+- name: Edge — obtain the Let's Encrypt certificate
+  hosts: kidora_edge
+  become: true
+  gather_facts: true
+  tags: [edge, certbot, tls]
+
+  roles:
+    - role: certbot_webroot
+      tags: [edge, certbot, tls]
+
+- name: Edge — switch nginx over to TLS now that the certificate exists
+  hosts: kidora_edge
+  become: true
+  gather_facts: true
+  tags: [edge, nginx, tls]
+
+  # roles/edge_nginx stats the certificate first and only then chooses between
+  # the TLS vhosts and the HTTP bootstrap, so this play is what installs them.
+  roles:
+    - role: edge_nginx
+      tags: [edge, nginx, tls]
+
+  post_tasks:
+    - name: Wait for the public site to answer over TLS
+      ansible.builtin.uri:
+        url: "https://{{ domain_name }}/"
+        status_code: 200
+        validate_certs: false
+      register: public_site
+      until: public_site is succeeded
+      retries: 20
+      delay: 6
+      # Only meaningful when a certificate actually exists; on a run that only
+      # installed the bootstrap vhost there is no HTTPS listener yet.
+      when: ssl_certificate_path is exists
+
+    - name: Report the edge endpoints
+      ansible.builtin.debug:
+        msg:
+          - "=============================================="
+          - "Edge is up on {{ inventory_hostname }}"
+          - "=============================================="
+          - "Public site  : https://{{ domain_name }}"
+          - "Grafana      : https://{{ domain_name }}{{ grafana_vhost.location }}/"
+          - "Prometheus   : https://{{ domain_name }}/prometheus/ (tailnet only)"
+          - "Backoffice   : https://{{ backoffice_vhost.server_name }} (tailnet only)"
+          - "Edge IP      : {{ kidora_edge_ip }}"
+          - "=============================================="

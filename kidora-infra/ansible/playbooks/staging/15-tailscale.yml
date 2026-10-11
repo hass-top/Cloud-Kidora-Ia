@@ -1,0 +1,127 @@
+---
+# =============================================================================
+#  15 — Tailscale: every server
+# =============================================================================
+#  Joins all three servers to the private tailnet. This is what makes the
+#  backoffice and the Prometheus UI reachable without exposing them publicly.
+#
+#  Needs vault_tailscale_auth_key on the first run. To list the addresses once
+#  joined:
+#      ansible kidora -i inventories/staging/hosts.ini -a "tailscale status"
+# =============================================================================
+
+- name: Tailscale — join every server to the private tailnet
+  hosts: kidora
+  become: true
+  gather_facts: true
+
+  vars:
+    # Falls back to an env var so CI can inject the key without touching the
+    # vault; the assert below fails clearly if neither is present.
+    tailscale_auth_key: "{{ vault_tailscale_auth_key | default(ansible_env.TAILSCALE_AUTH_KEY | default('')) }}"
+
+  tasks:
+    # `when` is a task keyword, NOT a play keyword — putting it on the play is a
+    # hard syntax error ("'when' is not a valid attribute for a Play"). The
+    # opt-out guard therefore lives on a block that wraps every task.
+    - name: Join the private tailnet
+      when: tailscale_enabled | bool
+      block:
+        - name: Install the packages needed for the Tailscale repository
+          ansible.builtin.apt:
+            name: [ca-certificates, curl, apt-transport-https]
+            state: present
+            update_cache: true
+
+        - name: Download the Tailscale signing key
+          ansible.builtin.get_url:
+            url: https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg
+            dest: /usr/share/keyrings/tailscale-archive-keyring.gpg
+            mode: "0644"
+          register: ts_key
+          until: ts_key is succeeded
+          retries: 3
+          delay: 5
+
+        # Tailscale has changed the packaging of this list before; leaving a stale
+        # entry behind makes apt fail with a confusing GPG error.
+        - name: Remove stale Tailscale apt sources
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: absent
+          loop:
+            - /etc/apt/sources.list.d/tailscale.list
+            - /etc/apt/sources.list.d/tailscale.sources
+
+        - name: Add the Tailscale apt repository
+          ansible.builtin.apt_repository:
+            repo: "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/ubuntu {{ ansible_distribution_release }} main"
+            state: present
+            filename: tailscale
+            update_cache: true
+          register: ts_repo
+          until: ts_repo is succeeded
+          retries: 3
+          delay: 5
+
+        - name: Install Tailscale
+          ansible.builtin.apt:
+            name: tailscale
+            state: present
+          register: ts_install
+          until: ts_install is succeeded
+          retries: 3
+          delay: 5
+
+        - name: Ensure tailscaled is running and enabled
+          ansible.builtin.systemd:
+            name: tailscaled
+            state: started
+            enabled: true
+            daemon_reload: true
+          register: ts_service
+          until: ts_service is succeeded
+          retries: 3
+          delay: 5
+
+        - name: Assert that a Tailscale auth key is available
+          ansible.builtin.assert:
+            that:
+              - tailscale_auth_key is defined
+              - tailscale_auth_key | length > 0
+            fail_msg: >-
+              vault_tailscale_auth_key is not set. Add it with
+              `ansible-vault edit inventories/staging/group_vars/vault.yml`, or set
+              tailscale_enabled: false in group_vars/all.yml to skip the tailnet.
+            quiet: true
+
+        - name: Join the tailnet
+          ansible.builtin.command:
+            cmd: >-
+              tailscale up
+              --authkey {{ tailscale_auth_key }}
+              --accept-routes={{ tailscale_accept_routes | bool | lower }}
+              --accept-dns={{ tailscale_accept_dns | bool | lower }}
+              {% for tag in tailscale_tags %}--advertise-tags={{ tag }} {% endfor %}
+          register: ts_up
+          changed_when: "'already logged in' not in ts_up.stderr"
+          failed_when:
+            - ts_up.rc != 0
+            - "'Logged out' not in ts_up.stderr"
+          no_log: true
+
+        - name: Wait for Tailscale to report a tailnet address
+          ansible.builtin.command: tailscale ip -4
+          register: ts_ip
+          changed_when: false
+          until: ts_ip.rc == 0 and ts_ip.stdout | trim | length > 0
+          retries: 20
+          delay: 6
+
+        - name: Record the tailnet address of this server
+          ansible.builtin.set_fact:
+            tailscale_ip: "{{ ts_ip.stdout | trim }}"
+
+        - name: Report the tailnet address
+          ansible.builtin.debug:
+            msg: "{{ inventory_hostname }} ({{ kidora_role }}) is on the tailnet at {{ tailscale_ip }}"

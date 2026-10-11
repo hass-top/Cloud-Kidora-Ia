@@ -1,0 +1,91 @@
+---
+# =============================================================================
+#  srv2 — APPLICATION : MongoDB, backend, frontend, backoffice, AI, MinIO
+# =============================================================================
+#  Installed by roles/app_stack into a single Compose project at /opt/kidora.
+#  Secrets (mongo/minio passwords, APP_SECRET_KEY, AI keys) come from the vault.
+# =============================================================================
+
+# --- Published ports ----------------------------------------------------------
+# Every one of these is bound on the app server and then locked down by UFW in
+# roles/network_firewall: only the edge IP (and, for the exporters, the
+# monitoring IP) is permitted. None of them is reachable from the Internet.
+mongodb_port: 27017
+backend_port: 8086
+frontend_port: 80
+# The backoffice image also serves its static build on 80, so it cannot share
+# the host's port 80 with the frontend. It is published on 8080 instead and the
+# edge nginx routes `backoffice.<domain>` there.
+backoffice_port: 8080
+ai_port: 8000
+minio_port: 9000
+minio_console_port: 9001
+
+# --- MongoDB ------------------------------------------------------------------
+# MONGO_INITDB_* only apply on an EMPTY data directory. After the first start,
+# changing these values does nothing — use roles/app_stack's init task or
+# `docker exec kidora-mongodb mongosh` to rotate credentials.
+mongodb_root_username: admin
+mongodb_persistence_size: 20Gi
+
+# --- MinIO --------------------------------------------------------------------
+minio_persistence_size: 20Gi
+
+# --- Services that must never be published to the host ------------------------
+# backend_uploads / ai_uploads are the only writable paths the containers own.
+app_persistence:
+  backend_uploads_size: 10Gi
+  ai_uploads_size: 10Gi
+
+# --- Resource ceilings --------------------------------------------------------
+# Staging hosts are small (the Terraform plan is vc2-2c-2gb), so the caps are
+# deliberately tight: a runaway JVM should be OOM-killed on the app host rather
+# than take MongoDB down with it.
+backend_memory_limit: 768m
+ai_memory_limit: 512m
+mongodb_memory_limit: 512m
+
+# --- Exporters (scraped by the Prometheus on srv1) ----------------------------
+mongo_exporter_port: 9216
+node_exporter_port: 9100
+cadvisor_port: 9101
+
+# --- UFW ruleset --------------------------------------------------------------
+# Nothing on this host is public. The application ports are reachable from the
+# edge nginx only; the three exporter ports are reachable from the monitoring
+# server only.
+firewall_rules:
+  - { port: 22, proto: tcp, source: any, comment: "SSH - administration" }
+
+  # --- Application services, proxied by the edge nginx ----------------------
+  - { port: 80, proto: tcp, source: "{{ kidora_edge_ip }}", comment: "frontend" }
+  - { port: 8080, proto: tcp, source: "{{ kidora_edge_ip }}", comment: "backoffice" }
+  - { port: 8086, proto: tcp, source: "{{ kidora_edge_ip }}", comment: "backend API" }
+  - { port: 8000, proto: tcp, source: "{{ kidora_edge_ip }}", comment: "AI service" }
+  - { port: 9000, proto: tcp, source: "{{ kidora_edge_ip }}", comment: "MinIO S3 API" }
+  - { port: 9001, proto: tcp, source: "{{ kidora_edge_ip }}", comment: "MinIO console" }
+
+  # MongoDB is deliberately absent. It binds 127.0.0.1 in the compose file, so
+  # it is unreachable from any other host no matter what the firewall says.
+  # Reach it with an SSH tunnel:
+  #     ssh -L 27017:127.0.0.1:27017 root@kidora-app
+
+  # --- Exporters, scraped by the Prometheus on srv1 -------------------------
+  - { port: 9100, proto: tcp, source: "{{ kidora_monitoring_ip }}", comment: "node-exporter" }
+  - { port: 9101, proto: tcp, source: "{{ kidora_monitoring_ip }}", comment: "cAdvisor" }
+  - { port: 9216, proto: tcp, source: "{{ kidora_monitoring_ip }}", comment: "MongoDB exporter" }
+
+  # --- MinIO over the tailnet ------------------------------------------------
+  # Stated explicitly instead of leaning on the interface-wide allow in
+  # roles/network_firewall, so this survives the 00-preflight /
+  # 15-tailscale ordering and any future change to that role:
+  #
+  #     http://<app-tailnet-ip>:9001   MinIO console
+  #     http://<app-tailnet-ip>:9000   S3 API (mc, SDKs)
+  #
+  # The edge-IP rules for the same ports above stay: the edge nginx still
+  # proxies bucket objects for the public site.
+  - { port: 9000, proto: tcp, source: "{{ tailscale_cidr }}", comment: "MinIO S3 API (tailnet)" }
+  - { port: 9001, proto: tcp, source: "{{ tailscale_cidr }}", comment: "MinIO console (tailnet)" }
+
+firewall_ranges: []

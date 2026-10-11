@@ -1,0 +1,15 @@
+---
+# =============================================================================
+#  edge_nginx handlers
+# =============================================================================
+#  Reload, never restart. A restart closes every open connection — including
+#  in-flight WebSocket sessions and the ACME challenge a renewal is mid-way
+#  through — whereas a reload is graceful and picks up the new configuration
+#  without dropping a request.
+# =============================================================================
+
+- name: reload nginx
+  ansible.builtin.systemd:
+    name: nginx
+    state: reloaded
+    daemon_reload: true

@@ -1,0 +1,55 @@
+---
+# =============================================================================
+#  fail2ban_hardening — brute-force protection for every server
+# =============================================================================
+#  Installs fail2ban and a systemd-managed jail.local. The file is templated
+#  rather than dropped in so the ban thresholds can be tuned per server role
+#  (the edge additionally jails nginx auth failures, which the app and
+#  monitoring servers do not serve).
+# =============================================================================
+
+- name: Ensure fail2ban is installed
+  ansible.builtin.apt:
+    name: fail2ban
+    state: present
+    update_cache: true
+
+- name: Ensure the jail configuration directory exists
+  ansible.builtin.file:
+    path: /etc/fail2ban/jail.d
+    state: directory
+    mode: "0755"
+
+- name: Ensure the filter drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/fail2ban/filter.d
+    state: directory
+    mode: "0755"
+
+- name: Write the fail2ban jail configuration
+  ansible.builtin.template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.d/99-kidora.local
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart fail2ban
+
+# Ubuntu's stock systemd-timesyncd jail aborts on 24.04 with a journal match
+# expression it cannot parse, which stops fail2ban from starting cleanly.
+# The jail is disabled by dropping an empty override.
+- name: Disable the incompatible systemd-timesyncd jail
+  ansible.builtin.template:
+    src: timesyncd.local.j2
+    dest: /etc/fail2ban/jail.d/00-disable-systemd-timesyncd.local
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart fail2ban
+
+- name: Ensure fail2ban is running and enabled
+  ansible.builtin.systemd:
+    name: fail2ban
+    state: started
+    enabled: true
+    daemon_reload: true

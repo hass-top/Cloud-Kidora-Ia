@@ -1,21 +1,52 @@
 ---
+# =============================================================================
+#  Deploy AI Backend
+# =============================================================================
+#  This playbook used to copy a standalone `ansible/files/docker-compose.yml`
+#  onto the host. That file was REMOVED: it was a Vultr-era copy of the whole
+#  stack, it had drifted from the real service definitions, and it carried
+#  hardcoded plaintext credentials. The compose definitions now live in exactly
+#  one place - kidora-infra/docker-compose/ - and this playbook copies from
+#  there, the same way docompose-app.yml does.
+#
+#  Only the `ai-backend` service is (re)created here; use docompose-app.yml to
+#  roll the whole application stack.
+# =============================================================================
 - name: Deploy AI Backend
   hosts: all
   become: true
   vars_files:
     - ../group_vars/all.yml
   tasks:
-    - name: Create AI backend uploads directory
+    - name: Ensure project directories exist
       file:
-        path: /opt/ai-backend/uploads
+        path: "{{ item }}"
         state: directory
-        mode: "0755"
+        mode: '0755'
+      loop:
+        - /opt/minio
+        - /opt/minio/services
+        - /opt/ai-backend/uploads
 
-    - name: Copy AI docker-compose file
+    # Single source of truth: the same compose file docompose-app.yml deploys.
+    - name: Copy application compose file
       copy:
-        src: ../files/docker-compose.yml
-        dest: /opt/minio/docker-compose.yml
+        src: ../../docker-compose/docker-compose-app.yml
+        dest: /opt/minio/docker-compose-app.yml
         mode: "0644"
+
+    # The `include:` in docker-compose-app.yml lists all four fragments, so all
+    # four must exist on the host even though only ai-backend is started.
+    - name: Copy application service files
+      copy:
+        src: "../../docker-compose/services/{{ item }}"
+        dest: "/opt/minio/services/{{ item }}"
+        mode: "0644"
+      loop:
+        - 04-backend.yml
+        - 05-ai-backend.yml
+        - 06-frontend.yml
+        - 07-nginx.yml
 
     - name: Copy AI environment file
       template:
@@ -26,6 +57,7 @@
     - name: Deploy AI backend with docker-compose
       community.docker.docker_compose_v2:
         project_src: /opt/minio
+        files: docker-compose-app.yml
         services:
           - ai-backend
         state: present

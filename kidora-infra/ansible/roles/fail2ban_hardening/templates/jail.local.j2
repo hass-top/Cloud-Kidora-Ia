@@ -1,0 +1,56 @@
+---
+# One [DEFAULT] only: fail2ban's parser merges duplicates, so a second block
+# would silently re-apply keys and confuse anyone reading the rendered file.
+[DEFAULT]
+bantime   = {{ fail2ban_sshd_bantime }}
+findtime  = {{ fail2ban_sshd_findtime }}
+maxretry  = {{ fail2ban_sshd_maxretry }}
+# Ban via UFW so the ban lands in the same ruleset the rest of this repo
+# manages, instead of fail2ban maintaining a second, parallel one.
+banaction = ufw
+banaction_allports = ufw
+# systemd journal is the log source on Ubuntu 24.04. The file backend silently
+# stops matching once logrotate truncates the file.
+backend = auto
+usedns  = dns
+
+[sshd]
+enabled  = true
+port     = 22
+logpath  = %(journald)s
+backend  = systemd
+maxretry = {{ fail2ban_sshd_maxretry }}
+findtime = {{ fail2ban_sshd_findtime }}
+bantime  = {{ fail2ban_sshd_bantime }}
+# Do not ban the Ansible control node: an operator fat-fingering a password
+# would otherwise lock the whole team out for an hour.
+ignoreip = 127.0.0.1/8 ::1 {{ fail2ban_ignore_ips | join(' ') }}
+
+{% if fail2ban_nginx_enabled | default(false) | bool %}
+[nginx-http-auth]
+enabled  = true
+port     = http,https
+filter   = nginx-http-auth
+logpath  = /var/log/nginx/error.log
+maxretry = {{ fail2ban_nginx_maxretry }}
+findtime = {{ fail2ban_sshd_findtime }}
+bantime  = {{ fail2ban_nginx_bantime }}
+
+[nginx-limit-req]
+enabled  = true
+port     = http,https
+filter   = nginx-limit-req
+logpath  = /var/log/nginx/error.log
+maxretry = 10
+findtime = {{ fail2ban_sshd_findtime }}
+bantime  = {{ fail2ban_nginx_bantime }}
+{% endif %}
+
+{% if fail2ban_docker_enabled | default(false) | bool %}
+[docker]
+enabled  = true
+port     = none
+filter   = docker
+logpath  = /var/log/containers/*.log
+maxretry = 10
+{% endif %}

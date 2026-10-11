@@ -1,0 +1,20 @@
+---
+# Defaults for the fail2ban_hardening role.
+
+# Ban window. The values are overridden per environment in
+# inventories/staging/group_vars/all.yml.
+fail2ban_sshd_maxretry: 5
+fail2ban_sshd_bantime: 1h
+fail2ban_sshd_findtime: 10m
+
+# Enabled on the edge only — see inventories/staging/group_vars/edge.yml.
+fail2ban_nginx_enabled: false
+fail2ban_nginx_bantime: 1h
+fail2ban_nginx_maxretry: 10
+
+# Requires a log shipper writing JSON to /var/log/containers; off by default.
+fail2ban_docker_enabled: false
+
+# Never ban these. Add the office/VPN egress ranges here.
+fail2ban_ignore_ips:
+  - 127.0.0.1/8

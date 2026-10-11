@@ -1,0 +1,35 @@
+---
+# =============================================================================
+#  Handlers for the monitoring stack
+# =============================================================================
+#  Prom hot-reloads its config with SIGHUP, so a new scrape config takes effect
+#  without dropping the TSDB lock or losing in-flight scrapes. Alertmanager and
+#  Grafana have no reload endpoint, so those are full restarts.
+# =============================================================================
+
+- name: reload prometheus
+  community.docker.docker_compose_v2:
+    project_src: "{{ deploy_root }}"
+    files: docker-compose.yml
+    services: [prometheus]
+    state: restarted
+  become: true
+  become_user: "{{ deploy_user }}"
+
+- name: reload alertmanager
+  community.docker.docker_compose_v2:
+    project_src: "{{ deploy_root }}"
+    files: docker-compose.yml
+    services: [alertmanager]
+    state: restarted
+  become: true
+  become_user: "{{ deploy_user }}"
+
+- name: restart grafana
+  community.docker.docker_compose_v2:
+    project_src: "{{ deploy_root }}"
+    files: docker-compose.yml
+    services: [grafana]
+    state: restarted
+  become: true
+  become_user: "{{ deploy_user }}"

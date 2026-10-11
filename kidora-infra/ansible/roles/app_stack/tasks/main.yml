@@ -1,0 +1,122 @@
+---
+# =============================================================================
+#  app_stack — MongoDB, MinIO, backend, AI, frontend, backoffice + exporters
+# =============================================================================
+#  Runs on the kidora_app host only (see playbooks/staging/30-app.yml).
+# =============================================================================
+
+# --- Filesystem layout --------------------------------------------------------
+#  The Compose volumes use bind mounts so the data lands under {{ deploy_root }}
+#  where a backup job can find it, rather than in an anonymous Docker volume.
+- name: Ensure the app directory tree exists
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ deploy_root }}", mode: "0755" }
+    - { path: "{{ deploy_root }}/mongo", mode: "0755" }
+    - { path: "{{ deploy_root }}/data/mongodb", mode: "0770" }
+    - { path: "{{ deploy_root }}/data/minio", mode: "0770" }
+    - { path: "{{ deploy_root }}/data/backend-uploads", mode: "0770" }
+    - { path: "{{ deploy_root }}/data/ai-uploads", mode: "0770" }
+  loop_control:
+    label: "{{ item.path }}"
+
+# --- Secrets ------------------------------------------------------------------
+#  0600: this file is the whole secret store for the app server.
+- name: Write the application environment file
+  ansible.builtin.template:
+    src: app.env.j2
+    dest: "{{ deploy_root }}/.env"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: "0600"
+  no_log: true
+
+- name: Write the MongoDB application-user bootstrap script
+  ansible.builtin.template:
+    src: init-app-user.js.j2
+    dest: "{{ deploy_root }}/mongo/init-app-user.js"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: "0640"
+  no_log: true
+
+# --- The stack ----------------------------------------------------------------
+- name: Deploy the application Compose file
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ deploy_root }}/docker-compose.yml"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: "0640"
+  register: app_compose
+
+- name: Ensure the application stack is up
+  community.docker.docker_compose_v2:
+    project_src: "{{ deploy_root }}"
+    files: docker-compose.yml
+    state: present
+    pull: missing
+    wait: true
+    wait_timeout: 600
+  become: true
+  become_user: "{{ deploy_user }}"
+
+# --- Post-deploy assertions ---------------------------------------------------
+- name: Wait for the backend API to answer
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ backend_port }}/actuator/health"
+    status_code: [200, 401, 403]
+    # 401/403 mean the app is up and rejecting an anonymous probe, which is
+    # the expected answer if the endpoint is secured. Only a 5xx or a refused
+    # connection means it is not ready.
+  register: backend_health
+  until: backend_health is succeeded
+  retries: 40
+  delay: 10
+
+- name: Wait for the AI service to answer
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ ai_port }}/health"
+    status_code: 200
+  register: ai_health
+  until: ai_health is succeeded
+  retries: 40
+  delay: 10
+
+- name: Wait for the frontend to answer
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ frontend_port }}/"
+    status_code: 200
+  register: frontend_health
+  until: frontend_health is succeeded
+  retries: 40
+  delay: 10
+
+- name: Wait for the backoffice to answer
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ backoffice_port }}/"
+    status_code: 200
+  register: backoffice_health
+  until: backoffice_health is succeeded
+  retries: 40
+  delay: 10
+
+- name: Report the application endpoints
+  ansible.builtin.debug:
+    msg:
+      - "=============================================="
+      - "Application stack is up on {{ inventory_hostname }}"
+      - "=============================================="
+      - "MongoDB    : mongodb://127.0.0.1:{{ mongodb_port }} (SSH tunnel only)"
+      - "Backend    : http://{{ kidora_app_ip }}:{{ backend_port }}"
+      - "Frontend   : http://{{ kidora_app_ip }}:{{ frontend_port }}"
+      - "Backoffice : http://{{ kidora_app_ip }}:{{ backoffice_port }} (edge routes backoffice.{{ domain_name }})"
+      - "AI service : http://{{ kidora_app_ip }}:{{ ai_port }}"
+      - "MinIO      : http://{{ kidora_app_ip }}:{{ minio_port }} (console :{{ minio_console_port }})"
+      - "Exporter   : http://{{ kidora_app_ip }}:{{ mongo_exporter_port }}/metrics"
+      - "=============================================="

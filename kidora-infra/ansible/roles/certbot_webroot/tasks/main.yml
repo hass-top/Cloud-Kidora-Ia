@@ -1,0 +1,94 @@
+---
+# =============================================================================
+#  certbot_webroot — Let's Encrypt certificates over HTTP-01
+# =============================================================================
+#  Deliberately NOT roles/certbot. That role obtains certificates with
+#  `certbot --standalone`, which has to bind port 80 itself — so it either
+#  fails while nginx is listening, or requires nginx to be stopped for every
+#  renewal, which is a recurring outage on the only public server.
+#
+#  This role uses the webroot plugin instead: nginx keeps serving, certbot just
+#  writes a file under /.well-known/acme-challenge/ and asks Let's Encrypt to
+#  fetch it. Renewal is therefore invisible to users.
+# =============================================================================
+
+- name: Install certbot
+  ansible.builtin.apt:
+    name: certbot
+    state: present
+    update_cache: true
+
+- name: Ensure the ACME webroot exists
+  ansible.builtin.file:
+    path: "{{ certbot_webroot_path }}/.well-known/acme-challenge"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: Ensure a certificate already exists
+  ansible.builtin.stat:
+    path: "{{ ssl_certificate_path }}"
+  register: current_certificate
+
+# --- Obtain -------------------------------------------------------------------
+- name: Request the certificate
+  ansible.builtin.command:
+    cmd: >-
+      certbot certonly
+      --webroot
+      --webroot-path {{ certbot_webroot_path }}
+      --cert-name {{ certbot_cert_name }}
+      --non-interactive
+      --agree-tos
+      --email {{ certbot_email }}
+      --keep-until-expiring
+      --deploy-hook "systemctl reload nginx"
+      {{ '--staging' if certbot_use_staging | bool else '' }}
+      --domains {{ certbot_domains | join(' ') }}
+  register: certbot_request
+  changed_when: "'not yet due for renewal' not in certbot_request.stderr"
+  when: not current_certificate.stat.exists
+  # A DNS record that has not propagated yet, or a transient rate-limit
+  # response, is worth retrying rather than failing the whole deployment on.
+  until: certbot_request.rc == 0
+  retries: 3
+  delay: 20
+
+- name: Re-check the certificate after requesting it
+  ansible.builtin.stat:
+    path: "{{ ssl_certificate_path }}"
+  register: issued_certificate
+
+- name: Fail when no certificate could be obtained
+  ansible.builtin.fail:
+    msg: |
+      certbot could not issue a certificate for {{ certbot_domains | join(', ') }}.
+      Check that:
+        - {{ domain_name }} and www.{{ domain_name }} resolve to {{ kidora_edge_ip }}
+        - port 80 is reachable from the Internet
+        - you are not still on the Let's Encrypt staging endpoint
+          (certbot_use_staging: {{ certbot_use_staging }})
+      certbot said:
+      {{ certbot_request.stderr | default('(no output captured)') }}
+  when: not issued_certificate.stat.exists
+
+# --- Renewal ------------------------------------------------------------------
+# The packaged certbot.timer already runs `certbot renew` twice a day; this
+# only has to be present and enabled. The --deploy-hook in the renewal
+# configuration reloads nginx after a successful renewal.
+- name: Ensure the certbot renewal timer is enabled
+  ansible.builtin.systemd:
+    name: certbot.timer
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Report the certificate state
+  ansible.builtin.debug:
+    msg:
+      - "Certificate : {{ ssl_certificate_path }}"
+      - "Domains     : {{ certbot_domains | join(', ') }}"
+      - "Endpoint    : {{ 'STAGING (not publicly trusted)' if certbot_use_staging | bool else 'production' }}"
+      - "Renewal     : certbot.timer (twice daily)"
+      - "NOTE        : set certbot_use_staging: false once DNS is final."

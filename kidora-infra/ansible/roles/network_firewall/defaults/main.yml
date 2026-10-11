@@ -1,0 +1,16 @@
+---
+# Defaults for the network_firewall role.
+# The rules themselves are per-role and live in
+# inventories/staging/group_vars/{monitoring,app,edge}.yml.
+
+# Wipe the ruleset on the first run of a host. Set to false for servers that
+# share a box with something you do not manage.
+ufw_reset_on_boot: true
+
+firewall_allow_tailscale: true
+firewall_logging: "on"
+
+# Roles must define this; a sane, closed baseline if one is ever missing so a
+# typo in group_vars cannot silently open the host up.
+firewall_rules: []
+firewall_ranges: []

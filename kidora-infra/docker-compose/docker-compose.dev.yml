@@ -1,0 +1,553 @@
+# =============================================================================
+# Kidora - FULL DEVELOPMENT STACK
+# =============================================================================
+
+name: kidora-dev
+
+services:
+  # ===========================================================================
+  # Nginx Reverse Proxy
+  # ===========================================================================
+
+  nginx:
+    image: nginx:alpine
+    container_name: kidora-nginx
+    restart: unless-stopped
+
+    depends_on:
+      frontend:
+        condition: service_started
+
+      backend:
+        condition: service_started
+
+      ai-backend:
+        condition: service_started
+
+      # nginx.conf declares `upstream backoffice { server backoffice:80; }`
+      # and nginx resolves upstream names at CONFIG-LOAD time, so an
+      # unresolvable `backoffice` makes nginx refuse to start outright. Waiting
+      # for the container to exist makes that guaranteed rather than a race
+      # that happens to be won.
+      backoffice:
+        condition: service_started
+
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      # Uncomment when you configure TLS:
+      # - "${HTTPS_PORT:-443}:443"
+
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+
+      # Later for HTTPS:
+      # - ./nginx/certs:/etc/nginx/certs:ro
+
+    networks:
+      - kidora_net
+  # ===========================================================================
+  # MongoDB
+  # ===========================================================================
+
+  mongodb:
+    image: mongo:8
+    container_name: kidora-mongodb
+    restart: unless-stopped
+
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:?set MONGODB_PASSWORD in docker-compose/.env - copy docker-compose/.env.example}
+
+    # Development access from the Docker host.
+    # Remove this in a production/private-only deployment.
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+
+    volumes:
+      - mongo_data:/data/db
+
+    networks:
+      - kidora_net
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "--eval",
+          "db.adminCommand('ping').ok"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+
+  # ===========================================================================
+  # MinIO
+  # ===========================================================================
+  #
+  # IMPORTANT:
+  #
+  # quay.io/minio/minio = MinIO SERVER
+  #
+  # minio/operator = Kubernetes operator
+  #
+  # We are using Docker Compose here, so the server image is required.
+
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: kidora-minio
+    restart: unless-stopped
+
+    command:
+      - server
+      - /data
+      - --console-address
+      - ":9001"
+
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD in docker-compose/.env - copy docker-compose/.env.example}
+
+      # The Console is reachable over Tailscale as well, on the same node as the
+      # backoffice but on a port of its own:
+      #
+      #     https://kidora-backoffice.<tailnet>.ts.net:8443
+      #
+      # See the `tailscale` service below and ./tailscale/serve.json. MinIO
+      # requires this to be set explicitly once the Console sits behind a
+      # reverse proxy, or the post-login redirect sends the browser to the
+      # internal http://minio:9001. The default keeps plain local use on
+      # http://localhost:9001 unchanged.
+      MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_REDIRECT_URL:-http://localhost:9001}
+
+    # Development access.
+    #
+    # These ports make MinIO accessible from the Docker host.
+    # If you want MinIO to be private too, remove these ports and access it
+    # through another internal service / VPN.
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+
+    volumes:
+      - minio_data:/data
+
+    networks:
+      - kidora_net
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-fsS",
+          "http://localhost:9000/minio/health/live"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+
+  # ===========================================================================
+  # Spring Boot Backend
+  # ===========================================================================
+
+  backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/hass-top/kidora-backend:latest}
+
+    # In development, use the local image if it already exists.
+    # Run `docker compose pull` when you explicitly want the newest image.
+    pull_policy: missing
+
+    container_name: kidora-backend
+    restart: unless-stopped
+
+    environment:
+
+      # -----------------------------------------------------------------------
+      # MongoDB
+      # -----------------------------------------------------------------------
+
+      SPRING_DATA_MONGODB_URI: ${MONGODB_URI:?set MONGODB_URI in docker-compose/.env - copy docker-compose/.env.example}
+
+      SPRING_DATA_MONGODB_DATABASE: ${MONGO_INITDB_DATABASE:-kidora}
+
+
+      # -----------------------------------------------------------------------
+      # MinIO
+      # -----------------------------------------------------------------------
+
+      MINIO_URL: http://minio:9000
+
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD in docker-compose/.env}
+
+      MINIO_BUCKET: ${MINIO_BUCKET:-kidora}
+
+
+      # -----------------------------------------------------------------------
+      # Application
+      # -----------------------------------------------------------------------
+
+      APP_SERVER_URL: ${APP_SERVER_URL:-http://localhost:8086}
+
+      APP_SECRET_KEY: ${APP_SECRET_KEY:?set APP_SECRET_KEY in docker-compose/.env - copy docker-compose/.env.example}
+
+      APP_JWT_EXPIRATION_TIME: ${APP_JWT_EXPIRATION_TIME:-86400000}
+
+
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+      minio:
+        condition: service_healthy
+
+
+    # Internal only. `expose` advertises the container port to sibling
+    # containers on kidora_net; it never binds anything on the host and does
+    # not accept the host:container form.
+    expose:
+      - "8086"
+
+    # Development access: publish the API on the host so you can hit Swagger
+    # and the REST API directly without going through nginx.
+    ports:
+      - "${APP_BACKEND_PORT:-8086}:8086"
+
+    volumes:
+      - backend_uploads:/app/uploads
+
+    networks:
+      - kidora_net
+
+  # ===========================================================================
+  # AI Backend
+  # ===========================================================================
+
+  ai-backend:
+    image: ${AI_BACKEND_IMAGE:-ghcr.io/hass-top/kidora-ia-center:latest}
+
+    pull_policy: missing
+
+    container_name: kidora-ai-backend
+    restart: unless-stopped
+
+    environment:
+
+      # -----------------------------------------------------------------------
+      # Groq
+      # -----------------------------------------------------------------------
+
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+
+      GROQ_MODEL_NAME: ${GROQ_MODEL_NAME:-llama-3.3-70b-versatile}
+
+      GROQ_VISION_MODEL: ${GROQ_VISION_MODEL:-llama-3.2-90b-vision-preview}
+
+
+      # -----------------------------------------------------------------------
+      # LLM
+      # -----------------------------------------------------------------------
+
+      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.7}
+
+      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-2048}
+
+      LLM_MEMORY_WINDOW: ${LLM_MEMORY_WINDOW:-10}
+
+
+      # -----------------------------------------------------------------------
+      # Application
+      # -----------------------------------------------------------------------
+
+      APP_NAME: ${APP_NAME:-Generateur de Rapports Educatifs IA}
+
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+
+      DEBUG: ${DEBUG:-true}
+
+
+      # -----------------------------------------------------------------------
+      # API
+      # -----------------------------------------------------------------------
+
+      API_HOST: 0.0.0.0
+
+      API_PORT: 8000
+
+
+      # -----------------------------------------------------------------------
+      # CORS
+      # -----------------------------------------------------------------------
+
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000,http://localhost:8080}
+
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+
+      # -----------------------------------------------------------------------
+      # Image generation
+      # -----------------------------------------------------------------------
+
+      BFL_API_KEY: ${BFL_API_KEY:-}
+
+      IMAGE_PROVIDER: ${IMAGE_PROVIDER:-gemini}
+
+      POLLINATIONS_API_KEY: ${POLLINATIONS_API_KEY:-}
+
+
+      # -----------------------------------------------------------------------
+      # Spring Boot
+      # -----------------------------------------------------------------------
+
+      SPRING_BOOT_BASE_URL: http://backend:8086
+
+
+    depends_on:
+      backend:
+        condition: service_started
+
+    # Internal only. `expose` advertises the container port to sibling
+    # containers on kidora_net; it never binds anything on the host and does
+    # not accept the host:container form.
+    expose:
+      - "8000"
+
+    # Development access: publish the AI service on the host so you can open
+    # /docs and /health directly.
+    ports:
+      - "${AI_PORT:-8000}:8000"
+
+    volumes:
+      - ai_uploads:/app/uploads
+
+    networks:
+      - kidora_net
+
+
+  # ===========================================================================
+  # Frontend
+  # ===========================================================================
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-ghcr.io/hass-top/kidora-frontend:latest}
+
+    pull_policy: missing
+
+    container_name: kidora-frontend
+    restart: unless-stopped
+
+    depends_on:
+      backend:
+        condition: service_started
+
+    # Internal only: the SPA is served on 80 inside the image.
+    expose:
+      - "80"
+
+    # Development access: the image serves the SPA (and proxies /api, /ws and
+    # /uploads to backend:8086) on container port 80, so publish that as the
+    # host port the SPA is expected on.
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+
+    networks:
+      - kidora_net
+
+
+  # ===========================================================================
+  # Backoffice
+  # ===========================================================================
+  #
+  # Container port is 80, NOT 5173. The image compiles the SvelteKit SPA to
+  # static files with @sveltejs/adapter-static and serves them with nginx
+  # (backoffice/Dockerfile). 5173 is the Vite *dev* server, which exists only
+  # when running `npm run dev` locally - it is not in the image.
+  #
+  # There is no `ports:` section, so Docker never binds this on the host.
+  # Other containers on kidora_net reach it at:
+  #
+  #     http://backoffice:80
+  #
+  # Humans reach it over Tailscale, not via localhost. This container joins the
+  # `tailscale` service's network namespace, so the tailnet address is this
+  # nginx and no host port mapping is involved:
+  #
+  #     https://kidora-backoffice.<tailnet>.ts.net
+  #
+  # See the tailscale service for why, and README.md for the URL table.
+  # ===========================================================================
+
+  backoffice:
+    image: ${BACKOFFICE_IMAGE:-ghcr.io/hass-top/kidora-backoffice:latest}
+
+    pull_policy: missing
+
+    container_name: kidora-backoffice
+    restart: unless-stopped
+
+    depends_on:
+      backend:
+        condition: service_started
+
+      # The sidecar owns the shared network namespace, so it has to come up
+      # first: there is nothing to join until it exists.
+      tailscale:
+        condition: service_started
+
+    # This container deliberately has no network namespace of its own: it joins
+    # the `tailscale` sidecar's, which is what puts the SPA behind the tailnet.
+    #
+    # `network_mode` REPLACES `networks:` and is incompatible with `ports:` and
+    # `expose:`; declaring it alongside any of them is a Compose validation
+    # error, so this service has none of the three.
+    #
+    # Nothing is lost by that: the tailscale service carries the `backoffice`
+    # network alias, so `http://backoffice:80` still resolves on kidora_net and
+    # `upstream backoffice` in nginx/nginx.conf keeps working.
+    network_mode: "service:tailscale"
+
+
+  # ===========================================================================
+  # Tailscale
+  # ===========================================================================
+  #
+  # The private entry point for the Backoffice. It is deliberately NOT
+  # published on the host, and it is NOT exposed to the Internet:
+  #
+  #     https://kidora-backoffice.<tailnet>.ts.net   (Tailscale Serve, TLS)
+  #     http://kidora-backoffice.<tailnet>.ts.net    (direct, no TLS)
+  #     http://<tailnet-ip>                          (the same thing by address)
+  #
+  # MinIO shares this node but not this port. Tailscale issues one certificate
+  # per node name, and 443 already answers for the backoffice, so the MinIO
+  # Console gets a port of its own in ./tailscale/serve.json:
+  #
+  #     https://kidora-backoffice.<tailnet>.ts.net:8443   (Tailscale Serve, TLS)
+  #         -> http://minio:9001                          (the MinIO Console)
+  #
+  # A port rather than a `/minio/` handler on 443: the MinIO Console cannot be
+  # served from a sub-path (upstream minio/minio#15859), so it has to be proxied
+  # at a root path.
+  #
+  # `minio` resolves because this sidecar is attached to kidora_net - the same
+  # reason `http://backoffice:80` does above. MinIO therefore needs no network
+  # namespace of its own, and neither does it need a second tailnet node.
+  #
+  # Funnel stays off on 8443 as well: an object-storage admin surface must not
+  # get a public URL, exactly like the backoffice. Set MINIO_BROWSER_REDIRECT_URL
+  # in .env to the :8443 URL once the node is on the tailnet so the Console's
+  # post-login redirect does not point at the internal http://minio:9001.
+  #
+  # How it works: this sidecar OWNS the network namespace and the backoffice
+  # joins it. tailscaled brings tun0 up in that namespace and the backoffice
+  # image's nginx binds :80 there, so the tailnet address *is* the backoffice.
+  #
+  # A Tailscale container with a namespace of its own (the previous
+  # configuration) joins the tailnet and appears in the admin console, but has
+  # nothing listening on it: the machine was there, the backoffice was not.
+  #
+  # The sidecar owns the namespace rather than joining the backoffice's, and
+  # that direction is what makes TLS work. The container hostname becomes the
+  # node's `TS_CERT_DOMAIN`, and Docker refuses to set `hostname:` on a
+  # container that joins another's namespace ("conflicting options: hostname
+  # and the network mode"). Joining instead would leave this container named
+  # after the backoffice's container ID, and ACME would then be asked for a
+  # certificate for `<container-id>.<tailnet>.ts.net`, which the control plane
+  # rejects with "403 Forbidden, unsupported domain name" - no certificate,
+  # no HTTPS.
+  # ===========================================================================
+
+  tailscale:
+    image: tailscale/tailscale:latest
+
+    container_name: kidora-tailscale
+
+    # The tailnet node name, and the value the certificate domain is built
+    # from:
+    #     kidora-backoffice.<tailnet>.ts.net
+    # It has to stay a valid DNS label, or the certificate request fails.
+    hostname: kidora-backoffice
+
+    restart: unless-stopped
+
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY:?set TS_AUTHKEY in docker-compose/.env}
+
+      TS_STATE_DIR: /var/lib/tailscale
+
+      # Kernel mode is REQUIRED here, not a preference: it gives the node a real
+      # address inside this namespace, which is the namespace the backoffice's
+      # nginx binds :80 in. In userspace mode the address lives inside
+      # tailscaled's own stack and :80 could not be reached without extra
+      # forwarding.
+      TS_USERSPACE: "false"
+
+      # Reuse the login already persisted in `tailscale_state` rather than
+      # consuming the auth key again on every restart.
+      TS_AUTH_ONCE: "true"
+
+      # Terminate TLS on 443 and reverse-proxy to the backoffice's nginx, which
+      # shares this namespace and therefore listens on this 127.0.0.1:80.
+      # The definition is ./tailscale/serve.json.
+      #
+      # Requires "HTTPS Certificates" to be enabled in the tailnet's DNS
+      # settings. Without it `tailscale serve` logs an error (the plain-HTTP
+      # URL above keeps working meanwhile), so enable it before starting this.
+      TS_SERVE_CONFIG: /config/serve.json
+
+    volumes:
+      - tailscale_state:/var/lib/tailscale
+
+      - /dev/net/tun:/dev/net/tun
+
+      # Read-only: the Serve definition (TLS on 443 -> the SPA on 80).
+      - ./tailscale/serve.json:/config/serve.json:ro
+
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+
+    networks:
+      kidora_net:
+        # The backoffice has no namespace of its own, so it has no DNS entry of
+        # its own either. This alias keeps `http://backoffice:80` resolving on
+        # kidora_net, which is what `upstream backoffice` in nginx/nginx.conf
+        # relies on: nginx resolves upstream names at config-load time and
+        # refuses to start on an unresolvable one.
+        aliases:
+          - backoffice
+
+
+# =============================================================================
+# Network
+# =============================================================================
+
+networks:
+
+  kidora_net:
+    driver: bridge
+    name: kidora_dev_net
+
+
+# =============================================================================
+# Persistent volumes
+# =============================================================================
+
+volumes:
+
+  mongo_data:
+
+  minio_data:
+
+  backend_uploads:
+
+  ai_uploads:
+
+  tailscale_state:

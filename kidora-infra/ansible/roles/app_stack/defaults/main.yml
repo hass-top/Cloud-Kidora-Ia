@@ -1,0 +1,9 @@
+---
+# Defaults for the app_stack role.
+# Real values come from inventories/staging/group_vars/app.yml.
+
+# JWT lifetime, in milliseconds (24h).
+app_jwt_expiration_time: 86400000
+
+# How long to wait for each service to report healthy.
+app_stack_wait_timeout: 600

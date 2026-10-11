@@ -1,0 +1,110 @@
+---
+# =============================================================================
+#  network_firewall — UFW policy per server role
+# =============================================================================
+#  Every host starts from a default-deny incoming policy and is then opened
+#  only where the 3-server topology actually requires it. The rules come from
+#  `firewall_rules` in inventories/staging/group_vars/{monitoring,app,edge}.yml.
+#
+#  This is the role that keeps MongoDB, MinIO, Grafana and Prometheus off the
+#  public Internet: each of them is bound to 0.0.0.0 inside Docker or on the
+#  host, and UFW is the only thing between them and an attacker.
+#
+#  Ordering matters and is deliberate: the policy is switched to deny BEFORE
+#  any allow-rule is added, and UFW itself is only enabled once the SSH rule
+#  exists. Enabling it earlier would lock the Ansible session out mid-run.
+# =============================================================================
+
+- name: Install UFW
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+    update_cache: true
+  register: ufw_install
+  until: ufw_install is succeeded
+  retries: 3
+  delay: 5
+
+# --- Default policy -----------------------------------------------------------
+# Deny inbound, allow outbound. Also reset any rules left over from a previous
+# run so the effective policy is whatever group_vars says it is, and not a
+# union of every policy this host has ever had.
+- name: Flush existing UFW rules
+  community.general.ufw:
+    state: reset
+  when: ufw_reset_on_boot | bool
+
+- name: Set default policies
+  community.general.ufw:
+    direction: "{{ item.direction }}"
+    policy: "{{ item.policy }}"
+  loop:
+    - { direction: incoming, policy: deny }
+    - { direction: outgoing, policy: allow }
+    - { direction: routed, policy: deny }
+
+# --- Outbound is unrestricted, but loopback stays permitted --------------------
+# Without this, the default-deny also blocks the container healthchecks and the
+# MongoDB/MinIO wiring that stays on the Docker bridge.
+
+# --- The rules ---------------------------------------------------------------
+- name: Apply per-role firewall rules
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto | default('tcp') }}"
+    from: "{{ item.source }}"
+    comment: "{{ item.comment | default(omit) }}"
+  loop: "{{ firewall_rules }}"
+  loop_control:
+    label: "{{ item.port }}/{{ item.proto | default('tcp') }} from {{ item.source }}"
+
+- name: Apply port-range rules
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.range }}"
+    proto: "{{ item.proto | default('tcp') }}"
+    from: "{{ item.source }}"
+    comment: "{{ item.comment | default(omit) }}"
+  loop: "{{ firewall_ranges | default([]) }}"
+  loop_control:
+    label: "range {{ item.range }}/{{ item.proto | default('tcp') }} from {{ item.source }}"
+
+# --- Tailscale interface ------------------------------------------------------
+# The tailnet traffic arrives on the tailscale0 device. Allowing it wholesale
+# lets you reach the backoffice, the MinIO console and the internal vhosts
+# without pinning every rule to 100.64.0.0/10 by hand.
+#
+# The rule is deliberately NOT conditional on the interface already existing,
+# for two reasons:
+#
+#   1. This role runs from 00-preflight, which runs BEFORE 15-tailscale installs
+#      Tailscale. On a first deploy tailscale0 does not exist yet, so an
+#      interface-presence check would skip the rule on exactly the run that
+#      needs it.
+#   2. The condition used to be `'tailscale0' in ansible_facts['devices']`, and
+#      `devices` holds BLOCK devices (sda, vda), NOT network interfaces - the
+#      interfaces are `ansible_facts['interfaces']`. The expression was
+#      therefore false on every run and the rule never applied at all, which is
+#      why MinIO on the app host was unreachable over the tailnet: the only
+#      rules matching :9000/:9001 were the edge-IP ones in group_vars/app.yml.
+#
+# UFW stores a rule against the interface NAME, so it starts matching as soon as
+# tailscaled brings the device up; a name that never appears is a harmless no-op.
+- name: Allow all traffic from the Tailscale interface
+  community.general.ufw:
+    rule: allow
+    interface: tailscale0
+  when:
+    - tailscale_enabled | bool
+    - firewall_allow_tailscale | bool
+
+# --- Go live ------------------------------------------------------------------
+# Reached only after the rules above exist. `force: true` keeps this
+# non-interactive so a CI/CD run cannot block on the "Command may disrupt
+# existing ssh connections" prompt.
+- name: Enable UFW
+  community.general.ufw:
+    state: enabled
+    logging: "{{ firewall_logging | default('on') }}"
+    force: true

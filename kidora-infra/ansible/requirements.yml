@@ -1,0 +1,18 @@
+---
+# Collections required by the 3-server staging stack.
+#
+#     ansible-galaxy collection install -r requirements.yml
+#
+# The kubernetes.core collection is deliberately NOT listed: the staging stack
+# is pure Docker Compose. It is only needed by the older k3s/Helm playbooks.
+collections:
+  - name: ansible.posix
+    version: ">=1.5.4"
+
+  - name: community.docker
+    version: ">=3.4.0"
+
+  # Used by roles/network_firewall for the UFW rules and the forced,
+  # non-interactive enable that keeps a CI run from blocking on a prompt.
+  - name: community.general
+    version: ">=8.0.0"
