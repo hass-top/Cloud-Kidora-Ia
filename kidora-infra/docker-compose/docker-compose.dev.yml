@@ -172,9 +172,9 @@ services:
       # MongoDB
       # -----------------------------------------------------------------------
 
-      SPRING_DATA_MONGODB_URI: ${MONGODB_URI:?set MONGODB_URI in docker-compose/.env - copy docker-compose/.env.example}
-
-      SPRING_DATA_MONGODB_DATABASE: ${MONGO_INITDB_DATABASE:-kidora}
+      SPRING_DATA_MONGODB_URI: ${SPRING_DATA_MONGODB_URI:?set SPRING_DATA_MONGODB_URI in .env}
+      
+      SPRING_DATA_MONGODB_DATABASE: ${SPRING_DATA_MONGODB_DATABASE:-kidora}
 
 
       # -----------------------------------------------------------------------
