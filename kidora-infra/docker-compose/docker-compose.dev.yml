@@ -157,7 +157,7 @@ services:
   # ===========================================================================
 
   backend:
-    image: ${BACKEND_IMAGE:-ghcr.io/hass-top/kidora-backend:latest}
+    image: ${BACKEND_IMAGE:-ghcr.io/hass-top/kidora-backend:dev}
 
     # In development, use the local image if it already exists.
     # Run `docker compose pull` when you explicitly want the newest image.
@@ -336,7 +336,7 @@ services:
   # ===========================================================================
 
   frontend:
-    image: ${FRONTEND_IMAGE:-ghcr.io/hass-top/kidora-frontend:latest}
+    image: ${FRONTEND_IMAGE:-ghcr.io/hass-top/kidora-frontend:dev}
 
     pull_policy: missing
 
